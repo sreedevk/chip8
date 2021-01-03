@@ -1,6 +1,8 @@
 #include "../VM/vm.hpp"
 #include "iseq.hpp"
 #include "../keyboard/keyboard.hpp"
+#include "../log/log.hpp"
+#include <iostream>
 
 Iseq::Iseq(VM *machine, uint16_t opcode) {
   this->sys = machine;
@@ -59,7 +61,9 @@ void Iseq::process(uint16_t opcode){
       handle_classF_opcode(opcode);
       break;
     default:
-      printf("[FATAL] UNSUPPORTED OPCODE!; %d\n", opcode);
+      Log::unsupported_opcode(opcode);
+      this->sys->print_machine_state();
+      this->sys->run = false;
       break;
   };
 }
@@ -70,18 +74,20 @@ void Iseq::handle_class0_opcode(uint16_t opcode) {
     case 0x00E0:
       /*00E0 - CLS*/
       this->sys->display->clear();
-      this->sys->PC+=1;
+      this->sys->incr_pc();
       break;
     case 0x00EE:
       /*00EE - RET*/
       if(this->sys->SP > 0) {
         this->sys->PC = (this->sys->STACK[--this->sys->SP]) % MEMORY_SIZE;
       } else {
-        printf("program error, restart required.");
+        Log::program_error();
+        this->sys->print_machine_state();
+        this->sys->run = false;
       }
       break;
     default:
-      printf("SYS addr - running routine at %03X\n", opcode & 0x0FFF);
+      this->sys->incr_pc();
       break;
   }
 }
@@ -93,7 +99,12 @@ void Iseq::handle_class1_opcode(uint16_t opcode){
 
 void Iseq::handle_class2_opcode(uint16_t opcode) {
   /*2nnn - CALL*/
-  if (this->sys->SP == STACK_SIZE) { printf("[FATAL] Stack Overflow!\n"); return; }
+  if (this->sys->SP == STACK_SIZE) {
+    Log::stack_overflow();
+    this->sys->print_machine_state();
+    this->sys->run = false;
+    return;
+  }
   this->sys->STACK[++this->sys->SP] = this->sys->PC;
   this->sys->PC = opcode & 0x0FFF;
 }
@@ -102,30 +113,30 @@ void Iseq::handle_class3_opcode(uint16_t opcode) {
   /*3xkk - SE Vx, byte*/
   uint8_t comp_val   = opcode & 0x00FF;
   uint8_t reg_value  = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
-  if(reg_value == comp_val) this->sys->PC+=1;
-  this->sys->PC+=1;
+  if(reg_value == comp_val) this->sys->incr_pc();
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class4_opcode(uint16_t opcode) {
   /*4xkk - SNE Vx, byte*/
   uint8_t comp_val  = opcode & 0x00FF;
   uint8_t reg_value = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
-  if(reg_value != comp_val) this->sys->PC+=1;
-  this->sys->PC+=1;
+  if(reg_value != comp_val) this->sys->incr_pc();
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class5_opcode(uint16_t opcode) {
   /*5xy0 - SE Vx, Vy*/
   uint8_t x_value = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
   uint8_t y_value = this->sys->fetch_register(((opcode & 0x00F0) >> 4));
-  if(x_value == y_value) this->sys->PC+=1;
-  this->sys->PC+=1;
+  if(x_value == y_value) this->sys->incr_pc();
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class6_opcode(uint16_t opcode) {
   /*6xkk - LD Vx, byte*/
   this->sys->set_register(((opcode & 0x0F00) >> 8), (opcode & 0x00FF));
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class7_opcode(uint16_t opcode) {
@@ -140,7 +151,7 @@ void Iseq::handle_class7_opcode(uint16_t opcode) {
   }
   reg_val += add_byte;
   this->sys->set_register(reg_addr, reg_val);
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class8_opcode(uint16_t opcode) {
@@ -218,24 +229,26 @@ void Iseq::handle_class8_opcode(uint16_t opcode) {
       break;
     }
     default:
-      printf("[FATAL] Invalid Opcode.\n");
+      Log::unsupported_opcode(opcode);
+      this->sys->print_machine_state();
+      this->sys->run = false;
       break;
   }
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_class9_opcode(uint16_t opcode) {
   /*9xy0 - SNE Vx, Vy */
   uint8_t xaddr = ((opcode & 0x0F00) >> 8);
   uint8_t yaddr = ((opcode & 0x00F0) >> 4);
-  if(this->sys->fetch_register(xaddr) != this->sys->fetch_register(yaddr)) this->sys->PC+=1;
-  this->sys->PC+=1;
+  if(this->sys->fetch_register(xaddr) != this->sys->fetch_register(yaddr)) this->sys->incr_pc();
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_classA_opcode(uint16_t opcode) {
   uint8_t target_addr = (opcode & 0x0FFF);
   this->sys->I = target_addr % MEMORY_SIZE;
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_classB_opcode(uint16_t opcode){
@@ -248,13 +261,13 @@ void Iseq::handle_classC_opcode(uint16_t opcode) {
   uint8_t regaddr = ((opcode & 0x0F00) >> 8);
   uint8_t ibytes  = (opcode & 0x00FF);
   this->sys->set_register(regaddr, (rand() % 0xFF) & ibytes);
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_classD_opcode(uint16_t opcode) {
   /*Dxyn - DRW Vx, Vy, nibble*/
   this->sys->display->draw_sprite(opcode);
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 
 void Iseq::handle_classE_opcode(uint16_t opcode) {
@@ -263,20 +276,22 @@ void Iseq::handle_classE_opcode(uint16_t opcode) {
       /*Ex9E - SKP Vx*/
       uint8_t keyaddr = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
       uint8_t key     = this->sys->fetch_register(keyaddr);
-      if(key!=0) this->sys->PC+=1;
-      this->sys->PC+=1;
+      if(key!=0) this->sys->incr_pc();
+      this->sys->incr_pc();
       break;
     }
     case 0x00A1: {
       /*ExA1 - SKNP Vx*/
       uint8_t keyaddr = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
       uint8_t key     = this->sys->fetch_register(keyaddr);
-      if(key==0) this->sys->PC+=1;
-      this->sys->PC+=1;
+      if(key==0) this->sys->incr_pc();
+      this->sys->incr_pc();
       break;
     }
     default:
-      printf("[FATAL] Invalid Opcode!\n");
+      Log::unsupported_opcode(opcode);
+      this->sys->print_machine_state();
+      this->sys->run = false;
       break;
   }
 }
@@ -336,9 +351,11 @@ void Iseq::handle_classF_opcode(uint16_t opcode) {
       break;
     }
     default:
-      printf("FATAL] Invalid Opcode!\n");
+      Log::unsupported_opcode(opcode);
+      this->sys->print_machine_state();
+      this->sys->run = false;
       break;
   }
-  this->sys->PC+=1;
+  this->sys->incr_pc();
 }
 

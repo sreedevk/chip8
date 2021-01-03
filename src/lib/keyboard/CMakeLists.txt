@@ -1,1 +1,1 @@
-add_library(keyboard keyboard.cpp keyboard.hpp)
+add_library(keyboard SHARED keyboard.cpp keyboard.hpp)

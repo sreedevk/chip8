@@ -3,56 +3,52 @@
 #include <stdio.h>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
+#include <bitset>
+#include <iomanip>
 #include "vm.hpp"
 #include <sys/stat.h>
 #include <algorithm>
+#include <unordered_map>
 #include "../iseq/iseq.hpp"
 #include "../display/display.hpp"
 #include "../keyboard/keyboard.hpp"
+#include "../log/log.hpp"
+#include "../charset/charset.hpp"
 
 VM::VM(){ 
-  initialize_memory();
-  initialize_gp_registers();
-  initialize_stack();
-}
-
-void VM::initialize_memory(){
   this->memory = (uint16_t *) calloc(MEMORY_SIZE, sizeof(uint16_t));
-}
-
-void VM::initialize_gp_registers(){
-  this->V = { 0 };
-}
-
-void VM::initialize_stack(){
-  this->STACK = { 0 };
-}
-
-void VM::initialize_program_counter(){
-  this->PC = PROGRAM_START_ADDR;
-}
-
-void VM::initialize_peripherals(){
+  this->V        = { 0 };
+  this->STACK    = { 0 };
+  this->SP       = 0;
+  this->I        = 0;
+  this->PC       = PROGRAM_START_ADDR;
+  this->DT       = 0;
+  this->ST       = 0;
   this->display  = new Display((void *) this);
   this->keyboard = new Keyboard();
+  this->load_charset();
+}
+
+void VM::load_charset(){
+  for(auto i=0; i<80; i++) {
+    *(this->memory+i) = Charset::chip8_charset[i];
+  }
 }
 
 void VM::load_program(std::string pgmfile){
-  std::fstream program_file;
-  program_file.open(pgmfile, std::ios::in | std::ios::binary);
-
-  this->program_size = program_file.seekg(0, std::ios::end).tellg();
-  program_file.seekg(0);
-
-  uint16_t temp_pc = this->PC;
-  while(program_file.tellg() < this->program_size) {
-    char *buffer = (char *) calloc(2, sizeof(char));
-    program_file.read(buffer, 2);
-    std::swap(buffer[0], buffer[1]);
-    *(this->memory+(++temp_pc)) = (uint16_t) *buffer;
+  std::ifstream program_file(pgmfile, std::ios::binary | std::ios::ate);
+  this->program_size = program_file.tellg();
+  std::cout << "PROGRAM SIZE: " << this->program_size << std::endl;
+  program_file.seekg(0, std::ios::beg);
+  char *buffer = (char *) malloc(sizeof(char) * this->program_size);
+  program_file.read(buffer, this->program_size);
+  for(long tmp_pc=0; tmp_pc<this->program_size; ++tmp_pc) {
+    this->memory[PROGRAM_START_ADDR+tmp_pc] = buffer[tmp_pc];
   }
+  free(buffer);
 }
 
 uint8_t VM::fetch_register(uint8_t register_addr){
@@ -64,13 +60,17 @@ void VM::set_register(uint8_t value, uint8_t register_addr){
 }
 
 void VM::playSound() {
-  std::cout << "SOUND PLAYED" << std::endl;
+  /* std::cout << "SOUND PLAYED" << std::endl; */
 }
 
 void VM::update_timers(){
   if(this->DT > 0) this->DT--;
   if(this->ST > 0) this->ST--;
   if(this->ST == 0) this->playSound();
+}
+
+void VM::incr_pc(){
+  this->PC++;
 }
 
 void VM::exec(){
@@ -80,4 +80,86 @@ void VM::exec(){
     delete(instruction);
     this->update_timers();
   }
+}
+
+
+/* LOGGING INFO */
+
+std::unordered_map<std::string, std::string> VM::inspect() {
+  std::unordered_map<std::string, std::string> info_table;
+  std::ostringstream info_buffer;
+  info_table["STACK"]           = this->inspect_stack();
+  info_table["MEMORY_LAYOUT"]   = this->inspect_memory();
+  info_table["GP_REGISTERS"]    = this->inspect_registers();
+  info_table["TIMERS"]          = this->inspect_timers();
+
+  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->PC << std::endl;
+  info_table["PROGRAM_COUNTER"] = info_buffer.str();
+  info_buffer.str(""); info_buffer.clear();
+
+  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->SP << std::endl;
+  info_table["STACK_POINTER"]   = info_buffer.str();;
+  info_buffer.str(""); info_buffer.clear();
+
+  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->memory[this->PC] << std::endl;
+  info_table["CURRENT_OPCODE"]  = info_buffer.str();;
+  info_buffer.str(""); info_buffer.clear();
+
+  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->I << std::endl << std::endl;
+  info_table["I_REGISTER"]      = info_buffer.str();
+  info_buffer.str(""); info_buffer.clear();
+
+  info_buffer << std::bitset<8>(this->flags).to_string() << std::endl;
+  info_table["FLAGS"]           = info_buffer.str();
+  info_buffer.str(""); info_buffer.clear();
+
+  return info_table;
+}
+
+std::string VM::inspect_stack(){
+  std::ostringstream stack_data;
+  for (auto i = std::begin(this->STACK); i != std::end(this->STACK); ++i)  {
+    stack_data << *i << ' ';
+  }
+  stack_data << "\n";
+  return stack_data.str();
+}
+
+std::string VM::inspect_memory() {
+  std::ostringstream mem_map;
+  mem_map.str("");
+  mem_map.clear();
+  mem_map << std::endl;
+
+  for(uint16_t mem_index = 0; mem_index < MEMORY_SIZE; mem_index++) {
+    uint16_t addr_val = *(this->memory+mem_index);
+    if(mem_index == PROGRAM_START_ADDR) mem_map << std::endl << 
+      Log::format_color(" ---- PROGRAM STORE ----", LOG_BCOLOR_YELLOW) << std::endl;
+    if(addr_val == *(this->memory+(mem_index-1)) && addr_val == 0x0) continue;
+    mem_map << std::hex << std::setw(4) << std::setfill('0') << addr_val << ' ';
+    if((mem_index + 1) % 8 == 0) mem_map << std::endl; 
+  }
+  mem_map << std::endl;
+  return mem_map.str();
+}
+
+std::string VM::inspect_registers(){
+  std::ostringstream reg_map;
+  reg_map << "\n";
+  for(int i=0; i<16; i++) {
+    reg_map << "V[" << i << "]: " << std::hex << std::setw(4) << std::setfill('0') << fetch_register(i) << "\t";
+    if((i+1) % 4 == 0) reg_map << std::endl;
+  }
+  reg_map << std::endl;
+  return reg_map.str();
+}
+
+std::string VM::inspect_timers(){
+  std::ostringstream timers;
+  timers << "DELAY TIMER(" << this->DT << ") " << "SOUND TIMER(" << this->ST << ")\n";
+  return timers.str();
+}
+
+void VM::print_machine_state(){
+  Log::print_vm_info(this->inspect());
 }

@@ -22,7 +22,7 @@ Display::Display(void *machine){
 void Display::initializeDisplayInternals(){
   for(int rows = 0; rows <= 31; rows++) {
     for(int cols = 0; cols<=63; cols++) {
-      this->display_pixel_data[rows * cols] = 0;
+      this->display_pixel_data.insert(std::begin(this->display_pixel_data) + rows * cols, 0);
     }
   }
 }

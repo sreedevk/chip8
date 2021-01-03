@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <unordered_map>
 #include "../keyboard/keyboard.hpp"
 #include "../display/display.hpp"
 
@@ -27,14 +28,12 @@ class VM {
   private:
     std::array<uint8_t, 16>  V;
     int                      program_size;
-
-    void initialize_memory();
-    void initialize_gp_registers();
-    void initialize_stack();
-    void initialize_program_counter();
-    void initialize_peripherals();
     void update_timers();
     void playSound();
+    std::string inspect_stack();
+    std::string inspect_memory();
+    std::string inspect_registers();
+    std::string inspect_timers();
 
   public:
     uint16_t                 *memory;
@@ -50,7 +49,11 @@ class VM {
 
     VM();
     void load_program(std::string);
+    void load_charset();
     uint8_t fetch_register(uint8_t);
+    void incr_pc();
     void set_register(uint8_t value, uint8_t register_addr);
     void exec();
+    void print_machine_state();
+    std::unordered_map<std::string, std::string> inspect();
 };

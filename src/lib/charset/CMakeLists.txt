@@ -1,1 +1,1 @@
-add_library(charset charset.cpp charset.hpp)
+add_library(charset charset.hpp charset.cpp)

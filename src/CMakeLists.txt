@@ -17,4 +17,4 @@ find_library(SDL2_IMAGE_LIBRARY
 
 add_subdirectory(lib)
 add_executable(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} vm keyboard display iseq charset)
+target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} ${SDL2_IMAGE_LIBRARY} vm keyboard display iseq charset log)
