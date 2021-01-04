@@ -1,6 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
-#include <stdio.h>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -19,7 +19,7 @@
 #include "../charset/charset.hpp"
 
 VM::VM(){ 
-  this->memory = (uint16_t *) calloc(MEMORY_SIZE, sizeof(uint16_t));
+  this->memory = (unsigned char *) calloc(MEMORY_SIZE, sizeof(unsigned char));
   this->V        = { 0 };
   this->STACK    = { 0 };
   this->SP       = 0;
@@ -41,14 +41,13 @@ void VM::load_charset(){
 void VM::load_program(std::string pgmfile){
   std::ifstream program_file(pgmfile, std::ios::binary | std::ios::ate);
   this->program_size = program_file.tellg();
-  std::cout << "PROGRAM SIZE: " << this->program_size << std::endl;
   program_file.seekg(0, std::ios::beg);
-  char *buffer = (char *) malloc(sizeof(char) * this->program_size);
-  program_file.read(buffer, this->program_size);
-  for(long tmp_pc=0; tmp_pc<this->program_size; ++tmp_pc) {
-    this->memory[PROGRAM_START_ADDR+tmp_pc] = buffer[tmp_pc];
+
+  char *rom_buffer = (char *) malloc(this->program_size);
+  program_file.read(rom_buffer, this->program_size);
+  for(int i=0; i<this->program_size; i++) {
+    *(this->memory+(PROGRAM_START_ADDR+i)) = (unsigned char) *(rom_buffer+i);
   }
-  free(buffer);
 }
 
 uint8_t VM::fetch_register(uint8_t register_addr){
@@ -76,7 +75,8 @@ void VM::incr_pc(){
 void VM::exec(){
   this->run = true;
   while(run) {
-    Iseq *instruction = new Iseq(this, this->memory[this->PC]);
+    uint16_t next_opcode = this->memory[this->PC] << 8 | this->memory[++this->PC];
+    Iseq *instruction = new Iseq(this, next_opcode);
     delete(instruction);
     this->update_timers();
   }
@@ -93,7 +93,7 @@ std::unordered_map<std::string, std::string> VM::inspect() {
   info_table["GP_REGISTERS"]    = this->inspect_registers();
   info_table["TIMERS"]          = this->inspect_timers();
 
-  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->PC << std::endl;
+  info_buffer << "0x" << std::hex << std::setw(4) << std::setfill('0') << this->PC << std::endl;
   info_table["PROGRAM_COUNTER"] = info_buffer.str();
   info_buffer.str(""); info_buffer.clear();
 
@@ -101,11 +101,11 @@ std::unordered_map<std::string, std::string> VM::inspect() {
   info_table["STACK_POINTER"]   = info_buffer.str();;
   info_buffer.str(""); info_buffer.clear();
 
-  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->memory[this->PC] << std::endl;
+  info_buffer << std::hex << std::setw(8) << std::setfill('0') << this->memory[this->PC] << std::endl;
   info_table["CURRENT_OPCODE"]  = info_buffer.str();;
   info_buffer.str(""); info_buffer.clear();
 
-  info_buffer << std::hex << std::setw(4) << std::setfill('0') << this->I << std::endl << std::endl;
+  info_buffer << "0x" << std::hex << std::setw(4) << std::setfill('0') << this->I << std::endl << std::endl;
   info_table["I_REGISTER"]      = info_buffer.str();
   info_buffer.str(""); info_buffer.clear();
 
@@ -130,15 +130,15 @@ std::string VM::inspect_memory() {
   mem_map.str("");
   mem_map.clear();
   mem_map << std::endl;
+  mem_map << std::endl << Log::format_color(" ---- PROGRAM MEMORY  ----", LOG_BCOLOR_YELLOW) << std::endl; 
 
-  for(uint16_t mem_index = 0; mem_index < MEMORY_SIZE; mem_index++) {
-    uint16_t addr_val = *(this->memory+mem_index);
-    if(mem_index == PROGRAM_START_ADDR) mem_map << std::endl << 
-      Log::format_color(" ---- PROGRAM STORE ----", LOG_BCOLOR_YELLOW) << std::endl;
-    if(addr_val == *(this->memory+(mem_index-1)) && addr_val == 0x0) continue;
-    mem_map << std::hex << std::setw(4) << std::setfill('0') << addr_val << ' ';
-    if((mem_index + 1) % 8 == 0) mem_map << std::endl; 
+  int tmp_pc = PROGRAM_START_ADDR;
+  while(tmp_pc < (PROGRAM_START_ADDR+this->program_size)) {
+    uint16_t ci_opcode = this->memory[tmp_pc] << 8 | this->memory[++tmp_pc];
+    mem_map << std::hex << std::setw(4) << std::setfill('0') << ci_opcode << ' ';
+    if((tmp_pc+1) % 8 == 0) mem_map << std::endl;
   }
+
   mem_map << std::endl;
   return mem_map.str();
 }
@@ -156,7 +156,7 @@ std::string VM::inspect_registers(){
 
 std::string VM::inspect_timers(){
   std::ostringstream timers;
-  timers << "DELAY TIMER(" << this->DT << ") " << "SOUND TIMER(" << this->ST << ")\n";
+  timers << "DELAY TIMER(" << unsigned(this->DT) << ") " << "SOUND TIMER(" << unsigned(this->ST) << ")\n";
   return timers.str();
 }
 

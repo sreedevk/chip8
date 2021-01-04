@@ -36,7 +36,7 @@ class VM {
     std::string inspect_timers();
 
   public:
-    uint16_t                 *memory;
+    unsigned char            *memory;
     uint16_t                 PC;     /* Program Counter */
     uint8_t                  SP;     /* Stack Pointer */
     uint8_t                  flags;
