@@ -74,8 +74,9 @@ void VM::incr_pc(){
 
 void VM::exec(){
   this->run = true;
+  uint16_t next_opcode;
   while(run) {
-    uint16_t next_opcode = this->memory[this->PC] << 8 | this->memory[++this->PC];
+    next_opcode = this->memory[this->PC] << 8 | this->memory[++this->PC];
     Iseq *instruction = new Iseq(this, next_opcode);
     delete(instruction);
     this->update_timers();
@@ -135,8 +136,14 @@ std::string VM::inspect_memory() {
   int tmp_pc = PROGRAM_START_ADDR;
   while(tmp_pc < (PROGRAM_START_ADDR+this->program_size)) {
     uint16_t ci_opcode = this->memory[tmp_pc] << 8 | this->memory[++tmp_pc];
-    mem_map << std::hex << std::setw(4) << std::setfill('0') << ci_opcode << ' ';
-    if((tmp_pc+1) % 8 == 0) mem_map << std::endl;
+    mem_map << std::hex << std::setw(4) << std::setfill('0');
+    if(tmp_pc == this->PC || tmp_pc == this->PC+1) {
+      mem_map << Log::format_color(std::to_string(ci_opcode), LOG_BCOLOR_GREEN) << ' ';
+    } else {
+      mem_map << ci_opcode << ' ';
+    }
+    if((tmp_pc+1) % 16 == 0) mem_map << std::endl;
+    tmp_pc++;
   }
 
   mem_map << std::endl;

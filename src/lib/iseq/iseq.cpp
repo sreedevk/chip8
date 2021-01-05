@@ -79,7 +79,8 @@ void Iseq::handle_class0_opcode(uint16_t opcode) {
     case 0x00EE:
       /*00EE - RET*/
       if(this->sys->SP > 0) {
-        this->sys->PC = (this->sys->STACK[--this->sys->SP]) % MEMORY_SIZE;
+        this->sys->PC = (this->sys->STACK[--this->sys->SP]);
+        this->sys->incr_pc();
       } else {
         Log::program_error();
         this->sys->print_machine_state();
@@ -94,25 +95,20 @@ void Iseq::handle_class0_opcode(uint16_t opcode) {
 
 void Iseq::handle_class1_opcode(uint16_t opcode){
   /*1nnn - JP*/
-  this->sys->PC = (opcode & 0x0FFF) % MEMORY_SIZE;
+  this->sys->PC = (opcode & 0x0FFF);
 }
 
 void Iseq::handle_class2_opcode(uint16_t opcode) {
   /*2nnn - CALL*/
-  if (this->sys->SP == STACK_SIZE) {
-    Log::stack_overflow();
-    this->sys->print_machine_state();
-    this->sys->run = false;
-    return;
-  }
-  this->sys->STACK[++this->sys->SP] = this->sys->PC;
+  this->sys->STACK[this->sys->SP] = this->sys->PC;
+  this->sys->SP++;
   this->sys->PC = opcode & 0x0FFF;
 }
 
 void Iseq::handle_class3_opcode(uint16_t opcode) {
   /*3xkk - SE Vx, byte*/
   uint8_t comp_val   = opcode & 0x00FF;
-  uint8_t reg_value  = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
+  uint8_t reg_value  = this->sys->fetch_register((opcode & 0x0F00) >> 8);
   if(reg_value == comp_val) this->sys->incr_pc();
   this->sys->incr_pc();
 }
@@ -120,7 +116,7 @@ void Iseq::handle_class3_opcode(uint16_t opcode) {
 void Iseq::handle_class4_opcode(uint16_t opcode) {
   /*4xkk - SNE Vx, byte*/
   uint8_t comp_val  = opcode & 0x00FF;
-  uint8_t reg_value = this->sys->fetch_register(((opcode & 0x0F00) >> 8));
+  uint8_t reg_value = this->sys->fetch_register((opcode & 0x0F00) >> 8);
   if(reg_value != comp_val) this->sys->incr_pc();
   this->sys->incr_pc();
 }
