@@ -19,7 +19,6 @@
 #include "../charset/charset.hpp"
 
 VM::VM(){ 
-  this->memory = (unsigned char *) calloc(MEMORY_SIZE, sizeof(unsigned char));
   this->V        = { 0 };
   this->STACK    = { 0 };
   this->SP       = 0;
@@ -34,7 +33,7 @@ VM::VM(){
 
 void VM::load_charset(){
   for(auto i=0; i<80; i++) {
-    *(this->memory+i) = Charset::chip8_charset[i];
+    this->memory[i] = Charset::chip8_charset[i];
   }
 }
 
@@ -45,9 +44,10 @@ void VM::load_program(std::string pgmfile){
 
   char *rom_buffer = (char *) malloc(this->program_size);
   program_file.read(rom_buffer, this->program_size);
-  for(int i=0; i<this->program_size; i++) {
-    *(this->memory+(PROGRAM_START_ADDR+i)) = (unsigned char) *(rom_buffer+i);
+  for(int i=0; i<this->program_size; ++i) {
+    this->memory[PROGRAM_START_ADDR+i] = (unsigned char) *(rom_buffer+i);
   }
+  free(rom_buffer);
 }
 
 uint8_t VM::fetch_register(uint8_t register_addr){
@@ -69,18 +69,23 @@ void VM::update_timers(){
 }
 
 void VM::incr_pc(){
-  this->PC++;
+  this->PC+=2;
 }
 
 void VM::exec(){
   this->run = true;
   uint16_t next_opcode;
   while(run) {
-    next_opcode = this->memory[this->PC] << 8 | this->memory[++this->PC];
+    next_opcode = this->memory[this->PC] << 8 | this->memory[this->PC+1];
+    this->incr_pc();
     Iseq *instruction = new Iseq(this, next_opcode);
     delete(instruction);
     this->update_timers();
   }
+}
+
+VM::~VM(){
+  delete(this->display);
 }
 
 
@@ -102,7 +107,8 @@ std::unordered_map<std::string, std::string> VM::inspect() {
   info_table["STACK_POINTER"]   = info_buffer.str();;
   info_buffer.str(""); info_buffer.clear();
 
-  info_buffer << std::hex << std::setw(8) << std::setfill('0') << this->memory[this->PC] << std::endl;
+  uint16_t current_opcode = this->memory[this->PC] << 8 | this->memory[this->PC+1];
+  info_buffer << "0x" << std::hex << std::setw(4) << std::setfill('0') << current_opcode << std::endl;
   info_table["CURRENT_OPCODE"]  = info_buffer.str();;
   info_buffer.str(""); info_buffer.clear();
 
@@ -154,7 +160,7 @@ std::string VM::inspect_registers(){
   std::ostringstream reg_map;
   reg_map << "\n";
   for(int i=0; i<16; i++) {
-    reg_map << "V[" << i << "]: " << std::hex << std::setw(4) << std::setfill('0') << fetch_register(i) << "\t";
+    reg_map << "V[" << i << "]: " << std::hex << std::setw(4) << std::setfill('0') << unsigned(fetch_register(i)) << "\t";
     if((i+1) % 4 == 0) reg_map << std::endl;
   }
   reg_map << std::endl;

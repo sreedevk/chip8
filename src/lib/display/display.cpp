@@ -17,12 +17,13 @@ Display::Display(void *machine){
   );
   this->renderer = SDL_CreateRenderer(this->window, GRAPHICS_HARDWARE_SELECTOR, SDL_RENDERER_ACCELERATED);
   this->initializeDisplayInternals();
+  clear();
 }
 
 void Display::initializeDisplayInternals(){
-  for(int rows = 0; rows <= 31; rows++) {
-    for(int cols = 0; cols<=63; cols++) {
-      this->display_pixel_data.insert(std::begin(this->display_pixel_data) + rows * cols, 0);
+  for(int rows = 0; rows < DISPLAY_HEIGHT; rows++) {
+    for(int cols = 0; cols < DISPLAY_WIDTH; cols++) {
+      this->display_pixel_data[rows*cols] = 0;
     }
   }
 }
@@ -30,10 +31,10 @@ void Display::initializeDisplayInternals(){
 void Display::clear(){
   memset(&this->display_pixel_data[0], 0, this->display_pixel_data.size() * sizeof this->display_pixel_data[0]);
   SDL_RenderClear(this->renderer);
+  SDL_RenderPresent(this->renderer);
 }
 
 void Display::render(){
-  SDL_LockSurface(this->surface);
   for(int row_index=0; row_index < DISPLAY_HEIGHT; row_index++) {
     for(int col_index=0; col_index < DISPLAY_WIDTH; col_index++) {
       SDL_Rect pixrect;
@@ -41,15 +42,10 @@ void Display::render(){
       pixrect.w = DISPLAY_SCALE;
       pixrect.x = col_index * DISPLAY_SCALE;
       pixrect.y = row_index * DISPLAY_SCALE;
-      uint8_t pixelColor = (this->display_pixel_data[(row_index * col_index)] == 1 ? 255 : 0);
-      SDL_FillRect(this->surface, &pixrect, SDL_MapRGB(this->surface->format, pixelColor, pixelColor, pixelColor));
+      SDL_SetRenderDrawColor(this->renderer, 255, 255, 255, 255);
+      SDL_RenderFillRect(this->renderer, &pixrect);
     }
   }
-  SDL_UnlockSurface(this->surface);  
-  this->texture = SDL_CreateTextureFromSurface(this->renderer, this->surface);
-  SDL_FreeSurface(this->surface);
-  SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
-  SDL_DestroyTexture(this->texture);
   SDL_RenderPresent(this->renderer);
 }
 
@@ -73,4 +69,10 @@ void Display::draw_sprite(uint16_t opcode) {
     }
   }
   sys->flags |= DRAW_F;
+}
+
+Display::~Display(){
+  SDL_DestroyRenderer(this->renderer);
+  SDL_DestroyWindow(this->window);
+  SDL_Quit();
 }

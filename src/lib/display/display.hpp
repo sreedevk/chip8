@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <vector>
+#include <array>
 #include <SDL2/SDL.h>
 
 #define DISPLAY_SCALE               5
@@ -12,11 +12,9 @@ class Display {
   private:
     SDL_Window                        *window;
     SDL_Renderer                      *renderer;
-    SDL_Texture                       *texture;
-    SDL_Surface                       *surface;
     void                              *sys;
     int                               flags;
-    std::vector<uint8_t>              display_pixel_data;
+    std::array<uint8_t, 64*32>        display_pixel_data;
 
   public:
     void clear();
@@ -24,4 +22,5 @@ class Display {
     void initializeDisplayInternals();
     void render();
     Display(void *);
+    ~Display();
 };

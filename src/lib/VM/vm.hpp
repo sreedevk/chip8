@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <array>
 #include <string>
-#include <vector>
 #include <cstddef>
 #include <unordered_map>
 #include "../keyboard/keyboard.hpp"
@@ -20,10 +19,6 @@
 #define HALT_F             1
 #define DRAW_F             2
 
-/*
-All instructions are 2 bytes long and are stored most-significant-byte first. In memory, the first byte of each instruction should be located at an even addresses. If a program includes sprite data, it should be padded so any instructions following it will be properly situated in RAM.
-*/
-
 class VM {
   private:
     std::array<uint8_t, 16>  V;
@@ -36,18 +31,19 @@ class VM {
     std::string inspect_timers();
 
   public:
-    unsigned char            *memory;
-    uint16_t                 PC;     /* Program Counter */
-    uint8_t                  SP;     /* Stack Pointer */
-    uint8_t                  flags;
-    bool                     run;
-    std::array<uint16_t, 16> STACK;
-    uint16_t                 I;
-    uint8_t                  DT, ST; /*Delay Timer & Sound Timer*/
-    Display                  *display;
-    Keyboard                 *keyboard;
+    std::array<unsigned char, MEMORY_SIZE> memory;
+    uint16_t                   PC;     /* Program Counter */
+    uint8_t                    SP;     /* Stack Pointer */
+    uint8_t                    flags;
+    bool                       run;
+    std::array<uint16_t, 16>   STACK;
+    uint16_t                   I;
+    uint8_t                    DT, ST; /*Delay Timer & Sound Timer*/
+    Display                    *display;
+    Keyboard                   *keyboard;
 
     VM();
+    ~VM();
     void load_program(std::string);
     void load_charset();
     uint8_t fetch_register(uint8_t);
