@@ -17,6 +17,8 @@
 #include "../keyboard/keyboard.hpp"
 #include "../log/log.hpp"
 #include "../charset/charset.hpp"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_keyboard.h>
 
 VM::VM(){ 
   this->V        = { 0 };
@@ -72,20 +74,30 @@ void VM::incr_pc(){
   this->PC+=2;
 }
 
+void VM::emulate_cycle(){
+  uint16_t next_opcode;
+  next_opcode = this->memory[this->PC] << 8 | this->memory[this->PC+1];
+  this->incr_pc();
+  Iseq *instruction = new Iseq(this, next_opcode);
+  delete(instruction);
+  this->update_timers();
+}
+
 void VM::exec(){
   this->run = true;
-  uint16_t next_opcode;
   while(run) {
-    next_opcode = this->memory[this->PC] << 8 | this->memory[this->PC+1];
-    this->incr_pc();
-    Iseq *instruction = new Iseq(this, next_opcode);
-    delete(instruction);
-    this->update_timers();
+    this->emulate_cycle();
+    if(this->keyboard->keystates[SDL_SCANCODE_ESCAPE]) break;
   }
+  exit(0);
+}
+
+void VM::destroy_internals(){
+  delete(this->display);
 }
 
 VM::~VM(){
-  delete(this->display);
+  this->destroy_internals();
 }
 
 

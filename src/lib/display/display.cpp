@@ -75,12 +75,12 @@ void Display::draw_sprite(uint16_t opcode) {
 
   for(int i=0; i < sprite_size; i++) {
     uint8_t sprite_row = sys->memory[sys->I+i];
-    int display_yi = 0;
+    int display_xi = 0;
     for(int column=0x01; column < 0xFF; column <<= 1) {
       int sprite_column_px = (sprite_row & column) == 0 ? 0 : 1;
-      if(this->display_pixel_data[(display_x + i) * (display_y + display_yi)] == 1) sys->set_register(0xF, 1);
-      this->display_pixel_data[(display_x + i) * (display_y + display_yi)] = sprite_column_px;
-      display_yi++;
+      if(this->display_pixel_data[(display_x) * (display_y + i)] == 1) sys->set_register(0xF, 1);
+      this->display_pixel_data[(display_x + display_xi) * (display_y + i)] = sprite_column_px;
+      display_xi++;
     }
   }
   render();

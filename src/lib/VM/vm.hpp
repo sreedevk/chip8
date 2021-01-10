@@ -49,7 +49,9 @@ class VM {
     uint8_t fetch_register(uint8_t);
     void incr_pc();
     void set_register(uint8_t value, uint8_t register_addr);
+    void emulate_cycle();
     void exec();
+    void destroy_internals();
     void print_machine_state();
     std::unordered_map<std::string, std::string> inspect();
 };
