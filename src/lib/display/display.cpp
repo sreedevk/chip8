@@ -1,6 +1,6 @@
 #include <SDL2/SDL.h>
-#include <vector>
 #include "display.hpp"
+#include <array>
 #include "../VM/vm.hpp"
 
 Display::Display(void *machine){
@@ -11,8 +11,8 @@ Display::Display(void *machine){
     "CHIP 8 EMULATOR",
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
-    DISPLAY_WIDTH,
-    DISPLAY_HEIGHT,
+    DISPLAY_WIDTH * DISPLAY_SCALE,
+    DISPLAY_HEIGHT * DISPLAY_SCALE,
     this->flags
   );
   this->renderer = SDL_CreateRenderer(this->window, GRAPHICS_HARDWARE_SELECTOR, SDL_RENDERER_ACCELERATED);
@@ -34,6 +34,18 @@ void Display::clear(){
   SDL_RenderPresent(this->renderer);
 }
 
+void Display::loadSplash() {
+  SDL_Rect srect;
+  srect.x = 0;
+  srect.y = 0;
+  srect.w = 10;
+  srect.h = 10;
+
+  SDL_SetRenderDrawColor(this->renderer, 128, 0, 128, 255);
+  SDL_RenderFillRect(this->renderer, &srect);
+  SDL_RenderPresent(this->renderer);
+}
+
 void Display::render(){
   for(int row_index=0; row_index < DISPLAY_HEIGHT; row_index++) {
     for(int col_index=0; col_index < DISPLAY_WIDTH; col_index++) {
@@ -42,33 +54,36 @@ void Display::render(){
       pixrect.w = DISPLAY_SCALE;
       pixrect.x = col_index * DISPLAY_SCALE;
       pixrect.y = row_index * DISPLAY_SCALE;
-      SDL_SetRenderDrawColor(this->renderer, 255, 255, 255, 255);
+      if(this->display_pixel_data[row_index * col_index] == 1) {
+        SDL_SetRenderDrawColor(this->renderer, 255, 255, 255, 255);
+      } else {
+        SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 255);
+      }
       SDL_RenderFillRect(this->renderer, &pixrect);
     }
   }
   SDL_RenderPresent(this->renderer);
 }
 
-void Display::draw_sprite(uint16_t opcode) {
-  VM *sys    = (VM *) this->sys;
-  uint8_t Vx = sys->fetch_register((opcode & 0x0F00) >> 8);
-  uint8_t Vy = sys->fetch_register((opcode & 0x00F0) >> 4);
-  uint8_t spriteSize = (opcode & 0x000F);
-  uint8_t currentSpriteStartAddr = sys->I;
-  uint8_t pixelData;
 
-  sys->set_register(SYS_REG_ADDR, 0); /* used for collision detection */
-  for(uint8_t ccolumn=0; ccolumn<spriteSize; ccolumn++) {
-    pixelData = sys->memory[currentSpriteStartAddr+ccolumn];
-    for(uint8_t crow=0; crow<8; crow++) {
-      if(((pixelData) & ((0x80) >> crow)) != 0) {
-        if(this->display_pixel_data[(Vx + crow + ((Vy+ccolumn) * 64))] == 1) {
-          this->display_pixel_data[(Vx+crow + ((Vy+ccolumn) * 64))] ^= 1;
-        }
-      }
+void Display::draw_sprite(uint16_t opcode) {
+  VM *sys     = (VM *) this->sys;
+  sys->set_register(0xF, 0); /* collision detection flag set to 0 */
+  int sprite_size = (opcode & 0x000Fu);
+  uint8_t display_x = sys->fetch_register(opcode & 0x0F00);
+  uint8_t display_y = sys->fetch_register(opcode & 0x00F0);
+
+  for(int i=0; i < sprite_size; i++) {
+    uint8_t sprite_row = sys->memory[sys->I+i];
+    int display_yi = 0;
+    for(int column=0x01; column < 0xFF; column <<= 1) {
+      int sprite_column_px = (sprite_row & column) == 0 ? 0 : 1;
+      if(this->display_pixel_data[(display_x + i) * (display_y + display_yi)] == 1) sys->set_register(0xF, 1);
+      this->display_pixel_data[(display_x + i) * (display_y + display_yi)] = sprite_column_px;
+      display_yi++;
     }
   }
-  sys->flags |= DRAW_F;
+  render();
 }
 
 Display::~Display(){

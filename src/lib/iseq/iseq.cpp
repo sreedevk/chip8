@@ -255,14 +255,14 @@ void Iseq::handle_classE_opcode(uint16_t opcode) {
       /*Ex9E - SKP Vx*/
       uint8_t keyaddr = this->sys->fetch_register(((opcode & 0x0F00u) >> 8));
       uint8_t key     = this->sys->fetch_register(keyaddr);
-      if(key!=0) this->sys->incr_pc();
+      if(this->sys->keyboard->checkKeyState(key)==1u) this->sys->incr_pc();
       break;
     }
     case 0x00A1u: {
       /*ExA1 - SKNP Vx*/
       uint8_t keyaddr = this->sys->fetch_register(((opcode & 0x0F00u) >> 8));
       uint8_t key     = this->sys->fetch_register(keyaddr);
-      if(key==0) this->sys->incr_pc();
+      if(this->sys->keyboard->checkKeyState(key)==0u) this->sys->incr_pc();
       break;
     }
     default:
