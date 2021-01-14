@@ -87,7 +87,7 @@ void VM::exec(){
   this->run = true;
   while(run) {
     this->emulate_cycle();
-    if(this->keyboard->keystates[SDL_SCANCODE_ESCAPE]) break;
+    if(this->keyboard->keystates[SDL_SCANCODE_ESCAPE]) this->run = false;
   }
   exit(0);
 }
