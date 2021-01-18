@@ -228,8 +228,7 @@ void Iseq::handle_class9_opcode(uint16_t opcode) {
 }
 
 void Iseq::handle_classA_opcode(uint16_t opcode) {
-  uint8_t target_addr = (opcode & 0x0FFFu);
-  this->sys->I = target_addr % MEMORY_SIZE;
+  this->sys->I = (opcode & 0x0FFFu);
 }
 
 void Iseq::handle_classB_opcode(uint16_t opcode){

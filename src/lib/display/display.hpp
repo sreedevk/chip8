@@ -3,10 +3,10 @@
 #include <array>
 #include <SDL2/SDL.h>
 
-#define DISPLAY_SCALE               5
+#define DISPLAY_SCALE               10
 #define DISPLAY_WIDTH               64
 #define DISPLAY_HEIGHT              32
-#define GRAPHICS_HARDWARE_SELECTOR -1
+#define GRAPHICS_HARDWARE_SELECTOR  -1
 
 class Display {
   private:

@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
-#include "display.hpp"
+#include <iostream>
 #include <array>
+#include "display.hpp"
 #include "../VM/vm.hpp"
 
 Display::Display(void *machine){
@@ -21,10 +22,8 @@ Display::Display(void *machine){
 }
 
 void Display::initializeDisplayInternals(){
-  for(int rows = 0; rows < DISPLAY_HEIGHT; rows++) {
-    for(int cols = 0; cols < DISPLAY_WIDTH; cols++) {
-      this->display_pixel_data[rows*cols] = 0;
-    }
+  for(int pixel_pos=0; pixel_pos < (DISPLAY_HEIGHT * DISPLAY_WIDTH); ++pixel_pos) {
+    this->display_pixel_data[pixel_pos] = 0;
   }
 }
 
@@ -47,6 +46,7 @@ void Display::loadSplash() {
 }
 
 void Display::render(){
+  SDL_RenderClear(this->renderer);
   for(int row_index=0; row_index < DISPLAY_HEIGHT; row_index++) {
     for(int col_index=0; col_index < DISPLAY_WIDTH; col_index++) {
       SDL_Rect pixrect;
@@ -69,18 +69,17 @@ void Display::render(){
 void Display::draw_sprite(uint16_t opcode) {
   VM *sys     = (VM *) this->sys;
   sys->set_register(0xF, 0); /* collision detection flag set to 0 */
-  int sprite_size = (opcode & 0x000Fu);
-  uint8_t display_x = sys->fetch_register(opcode & 0x0F00);
-  uint8_t display_y = sys->fetch_register(opcode & 0x00F0);
+  int sprite_height = (opcode & 0x000F);
+  uint8_t dx = sys->fetch_register((opcode & 0x0F00) >> 8);
+  uint8_t dy = sys->fetch_register((opcode & 0x00F0) >> 4);
 
-  for(int i=0; i < sprite_size; i++) {
-    uint8_t sprite_row = sys->memory[sys->I+i];
-    int display_xi = 0;
-    for(int column=0x01; column < 0xFF; column <<= 1) {
-      int sprite_column_px = (sprite_row & column) == 0 ? 0 : 1;
-      if(this->display_pixel_data[(display_x) * (display_y + i)] == 1) sys->set_register(0xF, 1);
-      this->display_pixel_data[(display_x + display_xi) * (display_y + i)] = sprite_column_px;
-      display_xi++;
+  for(int yline=0; yline < sprite_height; yline++) {
+    uint8_t sprite_line = sys->memory[sys->I+yline];
+    for(int xline=0; xline<8; xline++) {
+      if((sprite_line & (0x80 >> xline)) != 0) {
+        if(this->display_pixel_data[(dx + xline) * (dy+yline)] == 1) sys->set_register(0xF, 1);
+        this->display_pixel_data[(dx + xline) * (dy+yline)] = 1;
+      }
     }
   }
   render();
