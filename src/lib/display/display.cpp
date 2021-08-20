@@ -22,13 +22,20 @@ Display::Display(void *machine){
 }
 
 void Display::initializeDisplayInternals(){
-  for(int pixel_pos=0; pixel_pos < (DISPLAY_HEIGHT * DISPLAY_WIDTH); ++pixel_pos) {
-    this->display_pixel_data[pixel_pos] = 0;
+  for(int row=0; row < DISPLAY_HEIGHT; row++) {
+    for(int column = 0; column < DISPLAY_WIDTH; column++) {
+      this->display_pixel_data[row][column] = 0;
+    }
   }
 }
 
 void Display::clear(){
-  memset(&this->display_pixel_data[0], 0, this->display_pixel_data.size() * sizeof this->display_pixel_data[0]);
+ //memset(&this->display_pixel_data[0], 0, this->display_pixel_data.size() * sizeof this->display_pixel_data[0]);
+  for(int row=0; row < DISPLAY_HEIGHT; row++) {
+    for(int column = 0; column < DISPLAY_WIDTH; column++) {
+      this->display_pixel_data[row][column] = 0;
+    }
+  }
   SDL_RenderClear(this->renderer);
   SDL_RenderPresent(this->renderer);
 }
@@ -54,34 +61,42 @@ void Display::render(){
       pixrect.w = DISPLAY_SCALE;
       pixrect.x = col_index * DISPLAY_SCALE;
       pixrect.y = row_index * DISPLAY_SCALE;
-      if(this->display_pixel_data[row_index * col_index] == 1) {
-        SDL_SetRenderDrawColor(this->renderer, 255, 255, 255, 255);
-      } else {
+      is_pixel_active(row_index, col_index) ?
+        SDL_SetRenderDrawColor(this->renderer, 255, 255, 255, 255) : 
         SDL_SetRenderDrawColor(this->renderer, 0, 0, 0, 255);
-      }
+
       SDL_RenderFillRect(this->renderer, &pixrect);
     }
   }
   SDL_RenderPresent(this->renderer);
 }
 
+bool Display::is_pixel_active(int row, int column){
+  if(this->display_pixel_data[row][column] > 0) return true;
+      
+  return false;
+}
 
 void Display::draw_sprite(uint16_t opcode) {
   VM *sys     = (VM *) this->sys;
-  sys->set_register(0xF, 0); /* collision detection flag set to 0 */
   int sprite_height = (opcode & 0x000F);
   uint8_t dx = sys->fetch_register((opcode & 0x0F00) >> 8);
   uint8_t dy = sys->fetch_register((opcode & 0x00F0) >> 4);
+  uint8_t pixel;
 
-  for(int yline=0; yline < sprite_height; yline++) {
-    uint8_t sprite_line = sys->memory[sys->I+yline];
-    for(int xline=0; xline<8; xline++) {
-      if((sprite_line & (0x80 >> xline)) != 0) {
-        if(this->display_pixel_data[(dx + xline) * (dy+yline)] == 1) sys->set_register(0xF, 1);
-        this->display_pixel_data[(dx + xline) * (dy+yline)] = 1;
+  sys->set_register(0xF, 0); /* collision detection flag set to 0 */
+  for(int y_coordinate=0; y_coordinate <= sprite_height; y_coordinate++) {
+    pixel = sys->memory[sys->I + y_coordinate];
+    for(int x_coordinate = 0; x_coordinate < 8; x_coordinate++) {
+      if((pixel & (0x80 >> x_coordinate)) != 0) {
+        if(this->is_pixel_active(dy + y_coordinate, dx + x_coordinate))  {
+          sys->set_register(0xF, 1);
+        }
+        this->display_pixel_data[dy + y_coordinate][dx + x_coordinate] ^= 1;
       }
     }
   }
+  
   render();
 }
 

@@ -14,7 +14,7 @@ class Display {
     SDL_Renderer                      *renderer;
     void                              *sys;
     int                               flags;
-    std::array<uint8_t, DISPLAY_WIDTH * DISPLAY_HEIGHT>        display_pixel_data;
+    std::array<std::array<uint64_t, DISPLAY_WIDTH>, DISPLAY_HEIGHT> display_pixel_data;
 
   public:
     void clear();
@@ -22,6 +22,7 @@ class Display {
     void initializeDisplayInternals();
     void loadSplash();
     void render();
+    bool is_pixel_active(int, int);
     Display(void *);
     ~Display();
 };
