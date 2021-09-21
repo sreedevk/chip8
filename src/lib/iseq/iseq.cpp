@@ -257,7 +257,7 @@ void Iseq::handle_classE_opcode(uint16_t opcode) {
       if(this->sys->keyboard->checkKeyState(key)==1u) this->sys->incr_pc();
       break;
     }
-    case 0x00A1u: {
+    case 0x00A0u: {
       /*ExA1 - SKNP Vx*/
       uint8_t keyaddr = this->sys->fetch_register(((opcode & 0x0F00u) >> 8));
       uint8_t key     = this->sys->fetch_register(keyaddr);

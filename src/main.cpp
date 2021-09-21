@@ -7,4 +7,5 @@ int main(int argc, char *argv[]){
   chip->load_program(argv[1]);
   chip->exec();
   delete(chip);
+  return EXIT_SUCCESS;
 }
