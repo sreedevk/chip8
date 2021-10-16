@@ -1,6 +1,0 @@
-add_subdirectory(VM)
-add_subdirectory(iseq)
-add_subdirectory(display)
-add_subdirectory(charset)
-add_subdirectory(keyboard)
-add_subdirectory(log)

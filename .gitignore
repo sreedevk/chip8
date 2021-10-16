@@ -1,4 +1,7 @@
+/target/*
+!/target/.keep
 /build/*
 !/build/.keep
 /roms/*
 !/roms/.keep
+
