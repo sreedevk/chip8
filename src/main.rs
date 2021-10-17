@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod chip;
+mod assembler;
 use chip::VM;
 
 fn main() {

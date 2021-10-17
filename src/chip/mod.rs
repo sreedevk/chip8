@@ -2,24 +2,19 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::{io, char};
 use itertools::Itertools;
+use std::iter::FlatMap;
 use rand::{thread_rng, Rng};
 use ncurses::*;
+use std::io::Write;
 
 type Sprite = [u8; 5];
-type Display = [[u8; 64]; 32];
+type Display = [u64; 32];
 
 const PROGRAM_START_POINTER: usize = 0x200;
 const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
-
-const UNICODE_PIXELS: [char; 65] = [
-    '$', '@', 'B', '%', '8', '&', 'W', 'M', '#', '*', 'o', 'a', 'h', 'k', 'b', 'd', 'p', 'q',
-    'w', 'm', 'Z', 'O', '0', 'Q', 'L', 'C', 'J', 'U', 'Y', 'X', 'z', 'c', 'v', 'u', 'n', 'x',
-    'r', 'j', 'f', 't', '/', '|', '(', ')', '1', '{', '}', '[', ']', '?', '-', '_', '+',
-    '~', '<', '>', 'i', '!', 'l', 'I', ';', ':', ',', '^', '`'
-];
 
 const SPRITES: [Sprite; 16] = [
     [0xF0, 0x90, 0x90, 0x90, 0xF0], // 0
@@ -61,30 +56,21 @@ pub struct VM {
 impl DisplayManager {
     fn render_gfx(machine: &VM) {
         mv(0, 0);
-
         for (row_index, row) in machine.display.iter().enumerate() {
-            for (pix_index, pixel) in row.iter().enumerate() {
-                mv(row_index as i32, pix_index as i32);
-                addch(if *pixel > 0 { '█' as u32 } else { ' ' as u32 });
+            for column_index in 0..64 {
+                let pixel = (*row & (0x1 << column_index)) >> column_index;
+                mv(row_index as i32, column_index as i32);
+                addch(if pixel > 0 { '█' as u32 } else { ' ' as u32 });
             }
-        }
+        } 
         refresh();
     }
 
     fn init_display() {
         let locale_conf = LcCategory::all;
         setlocale(locale_conf, "en_US.UTF-8");
-
-        /* Setup ncurses. */
         initscr();
         raw();
-
-        /* Require input within 2 seconds. */
-        // halfdelay(20);
-        /* Enable mouse events. */
-        mousemask(ALL_MOUSE_EVENTS as mmask_t, None);
-
-        /* Allow for extended keyboard (like F1). */
         keypad(stdscr(), true);
         noecho();
     }
@@ -106,7 +92,7 @@ impl VM {
             memory:      [0; 4096],
             registers:   [0; 16],
             stack:       [0; 16],
-            display:     [[0; 64]; 32],
+            display:     [0; 32],
             keyboard:    [0; 16],
             running:     false
         }
@@ -116,8 +102,9 @@ impl VM {
 
     pub fn boot(&mut self, program_path: String) {
         DisplayManager::init_display();
-
+        self.load_fonts();
         self.load_program(program_path);
+
         self.running = true;
         while self.running {
             let exec_circuit = self.decode(self.fetch());
@@ -146,21 +133,47 @@ impl VM {
         }
     }
 
+    fn load_fonts(&mut self) {
+        for (index, font_char) in SPRITES.iter().flatten().enumerate() {
+            self.memory[index] = *font_char;
+        };
+    }
+
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
         DisplayManager::render_gfx(self);
     }
 
     fn clear_display(&mut self) {
-        self.display = [[0; 64]; 32];
+        self.display = [0; 32];
     }
 
     fn incr_pc(&mut self) {
         self.pc += 2;
     }
 
-    fn draw_sprite(&mut self, _opcode: u16) {
+    /* DXYN - DRW VX, VY, NIBBLE 
+     * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+     * The interpreter reads n bytes from memory, starting at the address stored in I.
+     * These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
+     * If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
+     * If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen. 
+     * See instruction 8xy3 for more information on XOR, and section 2.4, Display, for more information on the Chip-8 screen and sprites.
+     * */
+
+    fn draw_sprite(&mut self, opcode: u16) {
         /* DRAW SPRITE ONTO DISPLAY MEMORY */
+        /* u8:  0b10000000
+         * u64: 0b00000000000000000000000000000000000000000000000000000010000000
+         */
+
+        let x              = ((opcode & 0x0F00) >> 8) as usize;
+        let y              = ((opcode & 0x00F0) >> 4) as usize;
+        let sprite_size    = (opcode & 0x000F) as usize;
+
+        for index in y..(y + sprite_size) {
+            self.display[index] ^= (self.memory[self.i as usize] as u64) << x;
+        }
     }
 
 
@@ -381,15 +394,6 @@ impl VM {
     }
 
     fn generate_circuit_classd(&mut self, _opcode: u16) -> Box<dyn Fn(&mut VM, u16)> {
-        /*
-         * DXYN - DRW VX, VY, NIBBLE 
-         * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-         * The interpreter reads n bytes from memory, starting at the address stored in I.
-         * These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
-         * If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
-         * If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen. 
-         * See instruction 8xy3 for more information on XOR, and section 2.4, Display, for more information on the Chip-8 screen and sprites.
-         * */
         Box::new(|machine, code| {
             machine.draw_sprite(code);
         })
