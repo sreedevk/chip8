@@ -103,7 +103,7 @@ impl VM {
     /* PROCESS CYCLE */
 
     pub fn fetch(&self) -> u16 {
-        return ((self.memory[self.pc] as u16) << 8) | (self.memory[self.pc + 1] as u16);
+        return ((self.memory[self.pc + 1] as u16) << 8) | (self.memory[self.pc] as u16);
     }
 
     pub fn decode(&mut self, opcode: u16) -> Opcode {
@@ -138,7 +138,9 @@ impl VM {
                 machine.pc = machine.stack[machine.sp] as usize;
                 machine.sp -= 1; })
             }
-            _ => Box::new(|_machine, _code| println!("RUNNING ROUTINE") )
+            _ => Box::new(|_machine, code| {
+                println!("RUNNING ROUTINE: {:#08x}", code);
+            })
         }
 
     }
@@ -335,7 +337,9 @@ impl VM {
                 let _key     = machine.registers[keyaddr];
                 // if(this->sys->keyboard->checkKeyState(key)==0u) this->sys->incr_pc();
             }),
-            _ => Box::new(|_machine, code|  { println!("UNSUPPORTED OPCODE: {:#?}", code); } )
+            _ => Box::new(|_machine, code|  {
+                println!("UNSUPPORTED OPCODE: {:#?}", code);
+            })
         }
     }
 
@@ -347,7 +351,7 @@ impl VM {
             }),
             /*Fx0A - LD Vx, K*/
             0x000Au16 => Box::new(|_machine, _code| {
-                println!("INSTRUCTION TBI");
+                println!("INSTRUCTION NOT IMPLEMENTED");
                 // let key = this->sys->keyboard->expectKeyDown();
                 // machine.registers[((opcode & 0x0F00u) >> 8) as usize] = key;
             }),
@@ -391,7 +395,9 @@ impl VM {
                     machine.registers[index_offset] = machine.memory[(machine.i as usize) + index_offset];
                 }
             }),
-            _ => Box::new(|_machine, code|  { println!("UNSUPPORTED OPCODE: {:#?}", code); } )
+            _ => Box::new(|_machine, code|  {
+                println!("UNSUPPORTED OPCODE: {:#?}", code);
+            })
         }
     }
 }
