@@ -1,15 +1,46 @@
-
 use std::io::prelude::*;
 use std::fs::File;
-use std::io;
+use std::{io, char};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
+use ncurses::*;
+
+type Sprite = [u8; 5];
+type Display = [[u8; 64]; 32];
 
 const PROGRAM_START_POINTER: usize = 0x200;
 const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
+
+const UNICODE_PIXELS: [char; 65] = [
+    '$', '@', 'B', '%', '8', '&', 'W', 'M', '#', '*', 'o', 'a', 'h', 'k', 'b', 'd', 'p', 'q',
+    'w', 'm', 'Z', 'O', '0', 'Q', 'L', 'C', 'J', 'U', 'Y', 'X', 'z', 'c', 'v', 'u', 'n', 'x',
+    'r', 'j', 'f', 't', '/', '|', '(', ')', '1', '{', '}', '[', ']', '?', '-', '_', '+',
+    '~', '<', '>', 'i', '!', 'l', 'I', ';', ':', ',', '^', '`'
+];
+
+const SPRITES: [Sprite; 16] = [
+    [0xF0, 0x90, 0x90, 0x90, 0xF0], // 0
+    [0x20, 0x60, 0x20, 0x20, 0x70], // 1
+    [0xF0, 0x10, 0xF0, 0x80, 0xF0], // 2
+    [0xF0, 0x10, 0xF0, 0x10, 0xF0], // 3
+    [0x90, 0x90, 0xF0, 0x10, 0x10], // 4
+    [0xF0, 0x80, 0xF0, 0x10, 0xF0], // 5
+    [0xF0, 0x80, 0xF0, 0x90, 0xF0], // 6
+    [0xF0, 0x10, 0x20, 0x40, 0x40], // 7
+    [0xF0, 0x90, 0xF0, 0x90, 0xF0], // 8
+    [0xF0, 0x90, 0xF0, 0x10, 0xF0], // 9
+    [0xF0, 0x90, 0xF0, 0x90, 0x90], // A
+    [0xE0, 0x90, 0xE0, 0x90, 0xE0], // B
+    [0xF0, 0x80, 0x80, 0x80, 0xF0], // C
+    [0xE0, 0x90, 0x90, 0x90, 0xE0], // D
+    [0xF0, 0x80, 0xF0, 0x80, 0xF0], // E
+    [0xF0, 0x80, 0xF0, 0x80, 0x80], // F
+];
+
+struct DisplayManager;
 
 #[derive(Debug)]
 pub struct VM {
@@ -21,9 +52,42 @@ pub struct VM {
     pub memory:      [u8; 4096],
     pub registers:   [u8; 16],
     pub stack:       [u16; STACK_SIZE],
-    pub display:     [[u8; 64]; 32],
+    pub display:     Display,
     pub keyboard:    [u8; 16],
     pub running:     bool
+}
+
+
+impl DisplayManager {
+    fn render_gfx(machine: &VM) {
+        mv(0, 0);
+
+        for (row_index, row) in machine.display.iter().enumerate() {
+            for (pix_index, pixel) in row.iter().enumerate() {
+                mv(row_index as i32, pix_index as i32);
+                addch(if *pixel > 0 { '█' as u32 } else { ' ' as u32 });
+            }
+        }
+        refresh();
+    }
+
+    fn init_display() {
+        let locale_conf = LcCategory::all;
+        setlocale(locale_conf, "en_US.UTF-8");
+
+        /* Setup ncurses. */
+        initscr();
+        raw();
+
+        /* Require input within 2 seconds. */
+        // halfdelay(20);
+        /* Enable mouse events. */
+        mousemask(ALL_MOUSE_EVENTS as mmask_t, None);
+
+        /* Allow for extended keyboard (like F1). */
+        keypad(stdscr(), true);
+        noecho();
+    }
 }
 
 pub struct Opcode {
@@ -51,6 +115,8 @@ impl VM {
     /* INTERFACE */
 
     pub fn boot(&mut self, program_path: String) {
+        DisplayManager::init_display();
+
         self.load_program(program_path);
         self.running = true;
         while self.running {
@@ -59,10 +125,11 @@ impl VM {
                 Err(_) => { self.running = false },
                 Ok(_) => ()
             }
+            self.post_cycle_ops();
         }
     }
 
-    pub fn load_program(&mut self, program_path: String) {
+    fn load_program(&mut self, program_path: String) {
         let program_file  = File::open(program_path).unwrap();
         let program_size = program_file.metadata().unwrap().len();
         let mut program: Vec<u8> = Vec::with_capacity(program_size as usize);
@@ -81,7 +148,7 @@ impl VM {
 
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
-        self.render_gfx();
+        DisplayManager::render_gfx(self);
     }
 
     fn clear_display(&mut self) {
@@ -96,24 +163,21 @@ impl VM {
         /* DRAW SPRITE ONTO DISPLAY MEMORY */
     }
 
-    fn render_gfx(&self) {
-        /* RENDER THE GRAPHICS TO SCREEN */
-    }
 
     /* PROCESS CYCLE */
 
-    pub fn fetch(&self) -> u16 {
+    fn fetch(&self) -> u16 {
         return ((self.memory[self.pc + 1] as u16) << 8) | (self.memory[self.pc] as u16);
     }
 
-    pub fn decode(&mut self, opcode: u16) -> Opcode {
+    fn decode(&mut self, opcode: u16) -> Opcode {
         Opcode {
             raw: opcode,
             circuit: self.build_circuit(opcode)
         }
     }
 
-    pub fn execute(&mut self, token: Opcode) -> Result<(), io::Error> {
+    fn execute(&mut self, token: Opcode) -> Result<(), io::Error> {
         (token.circuit)(self, token.raw);
         self.incr_pc();
         Ok(())
@@ -317,7 +381,15 @@ impl VM {
     }
 
     fn generate_circuit_classd(&mut self, _opcode: u16) -> Box<dyn Fn(&mut VM, u16)> {
-        /*DXYN - DRW VX, VY, NIBBLE*/
+        /*
+         * DXYN - DRW VX, VY, NIBBLE 
+         * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+         * The interpreter reads n bytes from memory, starting at the address stored in I.
+         * These bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed onto the existing screen.
+         * If this causes any pixels to be erased, VF is set to 1, otherwise it is set to 0.
+         * If the sprite is positioned so part of it is outside the coordinates of the display, it wraps around to the opposite side of the screen. 
+         * See instruction 8xy3 for more information on XOR, and section 2.4, Display, for more information on the Chip-8 screen and sprites.
+         * */
         Box::new(|machine, code| {
             machine.draw_sprite(code);
         })
