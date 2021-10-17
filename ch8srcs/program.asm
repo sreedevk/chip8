@@ -1,6 +1,9 @@
 .org $200
 
-; Setup
+section .text
+  global _start
+
+_start:
   cls
   ld v1, 25     ; X coord
 
@@ -13,8 +16,8 @@
   ld v0, $C     ; Draw C
   call drawChar
 
-endlessLoop:
-  jp endlessLoop
+; endlessLoop:
+;   jp endlessLoop
 
 drawChar:
   ld v2, 12     ; Y coord
