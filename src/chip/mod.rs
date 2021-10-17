@@ -162,9 +162,9 @@ impl VM {
      * */
 
     fn draw_sprite(&mut self, opcode: u16) {
-        /* DRAW SPRITE ONTO DISPLAY MEMORY */
-        /* u8:  0b10000000
-         * u64: 0b00000000000000000000000000000000000000000000000000000010000000
+        /*   DRAW SPRITE ONTO DISPLAY MEMORY
+         *   u8:  0b10000000
+         *   u64: 0b00000000000000000000000000000000000000000000000000000010000000
          */
 
         let x              = ((opcode & 0x0F00) >> 8) as usize;
@@ -172,7 +172,7 @@ impl VM {
         let sprite_size    = (opcode & 0x000F) as usize;
 
         for index in y..(y + sprite_size) {
-            self.display[index] ^= (self.memory[self.i as usize] as u64) << x;
+            self.display[index] = ((self.memory[self.i as usize] as u64) << x) ^ self.display[index];
         }
     }
 
@@ -353,7 +353,7 @@ impl VM {
                 machine.registers[xaddr] = xval >> 1;
             }),
             _ => Box::new(|_machine, code|  {
-                println!("UNSUPPORTED OPCODE: {:#?}", code);
+                panic!("UNSUPPORTED OPCODE: {:#?}", code);
             } )
         }
     }
@@ -414,7 +414,7 @@ impl VM {
                 // if(this->sys->keyboard->checkKeyState(key)==0u) this->sys->incr_pc();
             }),
             _ => Box::new(|_machine, code|  {
-                println!("UNSUPPORTED OPCODE: {:#?}", code);
+                panic!("UNSUPPORTED OPCODE: {:#?}", code);
             })
         }
     }
@@ -472,7 +472,7 @@ impl VM {
                 }
             }),
             _ => Box::new(|_machine, code|  {
-                println!("UNSUPPORTED OPCODE: {:#?}", code);
+                panic!("UNSUPPORTED OPCODE: {:#?}", code);
             })
         }
     }
