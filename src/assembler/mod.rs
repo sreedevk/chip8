@@ -37,10 +37,16 @@ impl Assembler {
         let section_pattern  = Regex::new(r"^section .text").unwrap();
         let global_pattern   = Regex::new(r"^\s+global .*$").unwrap();
         let func_def_pattern = Regex::new(r"^\w+:").unwrap();
+        let org_addr_pattern = Regex::new(r"^\.org \$\d+").unwrap();
 
-        if section_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
-        if global_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
-        if func_def_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
+        /* opcode matchers */
+        let cls_pattern = Regex::new(r"cls");
+        let ld_pattern  = Regex::new(r"(ld|LD)");
+
+        if org_addr_pattern.is_match(&formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
+        if section_pattern.is_match(formatted_line.as_str())   { println!("{:#?}", &formatted_line); }
+        if global_pattern.is_match(formatted_line.as_str())    { println!("{:#?}", &formatted_line); }
+        if func_def_pattern.is_match(formatted_line.as_str())  { println!("{:#?}", &formatted_line); }
 
         let mut token: Token = HashMap::new();
         token.insert("function", "");
