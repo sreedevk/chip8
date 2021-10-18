@@ -1,5 +1,6 @@
 use std::{env, fs};
 use std::collections::HashMap;
+use regex::Regex;
 
 type Token<'a> = HashMap<&'a str, &'a str>;
 pub struct Assembler;
@@ -9,19 +10,12 @@ impl Assembler {
         let code: String = Assembler::read_from_disk(program_file);
         let codelines: Vec<&str> = code.split("\n").collect();
 
-        let abst_syn_tree: Vec<Token> = codelines
+        let _tokenized_codelines: Vec<Token> = codelines
             .iter()
             .map(|codeline| Assembler::reformat(*codeline) )
             .filter(|fmt_codeline| fmt_codeline.is_some() )
             .map(|codeline| Assembler::tokenize(String::from(codeline.unwrap())) )
             .collect();
-    }
-
-    fn tokenize(_formatted_line: String) -> Token<'static> {
-        let mut token: Token = HashMap::new();
-        token.insert("function", "");
-        token.insert("args", "");
-        return token;
     }
 
     fn read_from_disk(program: String) -> String {
@@ -37,5 +31,20 @@ impl Assembler {
         else {
             return None;
         }
+    }
+
+    fn tokenize(formatted_line: String) -> Token<'static> {
+        let section_pattern  = Regex::new(r"^section .text").unwrap();
+        let global_pattern   = Regex::new(r"^\s+global .*$").unwrap();
+        let func_def_pattern = Regex::new(r"^\w+:").unwrap();
+
+        if section_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
+        if global_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
+        if func_def_pattern.is_match(formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
+
+        let mut token: Token = HashMap::new();
+        token.insert("function", "");
+        token.insert("args", "");
+        return token;
     }
 }
