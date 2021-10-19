@@ -15,7 +15,7 @@ const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
-const CLOCK_SPEED: u64 = 2;
+const CLOCK_SPEED: u64 = 80;
 const CLK_PERIOD: time::Duration = time::Duration::from_millis(1000 / CLOCK_SPEED);
 
 const SPRITES: [Sprite; 16] = [
@@ -391,6 +391,8 @@ impl VM {
             }),
             0x0004u16 => Box::new(|machine, code| {
                 /*8XY4 - ADD VX, VY*/
+                //TODO: The values of Vx and Vy are added together. If the result is greater than 8 bits (i.e., > 255,)
+                //VF is set to 1, otherwise 0. Only the lowest 8 bits of the result are kept, and stored in Vx.
                 let xaddr = ((code & 0x0F00u16) >> 8) as usize;
                 let yaddr = ((code & 0x00F0u16) >> 4) as usize;
                 let yval  = machine.registers[yaddr];
