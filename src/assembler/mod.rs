@@ -40,8 +40,8 @@ impl Assembler {
         let org_addr_pattern = Regex::new(r"^\.org \$\d+").unwrap();
 
         /* opcode matchers */
-        let cls_pattern = Regex::new(r"cls");
-        let ld_pattern  = Regex::new(r"(ld|LD)");
+        let _cls_pattern = Regex::new(r"(cls|CLS)");
+        let _ld_pattern  = Regex::new(r"(ld|LD)");
 
         if org_addr_pattern.is_match(&formatted_line.as_str()) { println!("{:#?}", &formatted_line); }
         if section_pattern.is_match(formatted_line.as_str())   { println!("{:#?}", &formatted_line); }

@@ -1,6 +1,6 @@
 use std::io::prelude::*;
 use std::fs::File;
-use std::{io, char};
+use std::{io, char, thread, time};
 use itertools::Itertools;
 use std::iter::FlatMap;
 use rand::{thread_rng, Rng};
@@ -15,6 +15,8 @@ const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
+const CLOCK_SPEED: u64 = 2;
+const CLK_PERIOD: time::Duration = time::Duration::from_millis(1000 / CLOCK_SPEED);
 
 const SPRITES: [Sprite; 16] = [
     [0xF0, 0x90, 0x90, 0x90, 0xF0], // 0
@@ -63,6 +65,46 @@ impl DisplayManager {
                 addch(if pixel > 0 { '█' as u32 } else { ' ' as u32 });
             }
         } 
+        DisplayManager::render_machine_info(machine);
+    }
+
+    fn render_machine_info(machine: &VM) {
+        mv(33, 0);
+        addstr(format!("current opcode: {:#04x}", machine.fetch()).as_str());
+
+        mv(34, 0);
+        addstr("stack:");
+
+        mv(35, 0);
+        addstr(
+            format!("{:#04x?}", machine.stack)
+            .replace("\n", "")
+            .as_str()
+        );
+
+        mv(37, 0);
+        addstr(
+            format!("registers [0..7]: {:#04x?}", &machine.registers[0..7])
+            .replace("\n", "")
+            .as_str()
+        );
+
+        mv(38, 0);
+        addstr(
+            format!("registers [8..F]: {:#04x?}", &machine.registers[8..15])
+            .replace("\n", "")
+            .as_str()
+        );
+
+        mv(40, 0);
+        addstr(
+            format!(
+                "pc: {:#04x}\tsp: {:#04x}\ti: {:#04x}\tsound_timer: {:#04x}\tdelay_timer: {:#04x}",
+                machine.pc, machine.sp, machine.i, machine.sound_timer, machine.delay_timer
+            )
+            .as_str()
+        );
+
         refresh();
     }
 
@@ -113,7 +155,13 @@ impl VM {
                 Ok(_) => ()
             }
             self.post_cycle_ops();
+            VM::clk_speed_delay_adjustments(CLK_PERIOD);
+            
         }
+    }
+
+    fn clk_speed_delay_adjustments(clk_period: time::Duration) {
+        thread::sleep(clk_period);
     }
 
     fn load_program(&mut self, program_path: String) {
