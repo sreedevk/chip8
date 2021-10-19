@@ -15,7 +15,7 @@ const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
-const CLOCK_SPEED: u64 = 80;
+const CLOCK_SPEED: u64 = 600;
 const CLK_PERIOD: time::Duration = time::Duration::from_millis(1000 / CLOCK_SPEED);
 
 const SPRITES: [Sprite; 16] = [
@@ -63,7 +63,7 @@ impl DisplayManager {
             for column_index in 0..64 {
                 let pixel = (*row & (0x1 << column_index)) >> column_index;
                 mv(row_index as i32, column_index as i32);
-                addch(if pixel > 0 { '█' as u32 } else { ' ' as u32 });
+                addch(if pixel > 0 { '⁂' as u32 } else { ' ' as u32 });
             }
         } 
         DisplayManager::render_machine_info(machine);
@@ -359,7 +359,7 @@ impl VM {
             else {
                 machine.registers[SYS_REG_ADDR] = 0;
             }
-            machine.registers[reg_addr] = reg_val + add_byte;
+            machine.registers[reg_addr] = ((reg_val as u16) + (add_byte as u16) | (0x00FF)) as u8;
         })
     }
 
@@ -398,7 +398,8 @@ impl VM {
                 let yval  = machine.registers[yaddr];
                 let xval  = machine.registers[xaddr];
                 machine.registers[SYS_REG_ADDR] = if yval > 0xFFu8 - xval { 1 } else { 0 };
-                machine.registers[xaddr] = yval + xval;
+
+                machine.registers[xaddr] = (((xval as u16) + (yval as u16)) | (0x00FFu16)) as u8;
             }),
             0x0005u16 => Box::new(|machine, code| {
                 /*8XY5 - SUB VX, VY*/
