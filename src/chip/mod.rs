@@ -104,7 +104,6 @@ impl DisplayManager {
             )
             .as_str()
         );
-
         refresh();
     }
 
@@ -250,6 +249,20 @@ impl VM {
         match opcode & 0xF000u16 {
             0x0000u16 => self.generate_circuit_class0(opcode),
             0x1000u16 => self.generate_circuit_class1(opcode),
+            0x2000u16 => self.generate_circuit_class2(opcode),
+            0x3000u16 => self.generate_circuit_class3(opcode),
+            0x4000u16 => self.generate_circuit_class4(opcode),
+            0x5000u16 => self.generate_circuit_class5(opcode),
+            0x6000u16 => self.generate_circuit_class6(opcode),
+            0x7000u16 => self.generate_circuit_class7(opcode),
+            0x8000u16 => self.generate_circuit_class8(opcode),
+            0x9000u16 => self.generate_circuit_class9(opcode),
+            0xA000u16 => self.generate_circuit_classa(opcode),
+            0xB000u16 => self.generate_circuit_classb(opcode),
+            0xC000u16 => self.generate_circuit_classc(opcode),
+            0xD000u16 => self.generate_circuit_classd(opcode),
+            0xE000u16 => self.generate_circuit_classe(opcode),
+            0xF000u16 => self.generate_circuit_classf(opcode),
             _ => Box::new(|_machine, _code|  () )
         }
     }
