@@ -57,6 +57,7 @@ pub struct VM {
 
 impl DisplayManager {
     fn render_gfx(machine: &VM) {
+        clear();
         mv(0, 0);
         for (row_index, row) in machine.display.iter().enumerate() {
             for column_index in 0..64 {
@@ -77,26 +78,37 @@ impl DisplayManager {
 
         mv(35, 0);
         addstr(
-            format!("{:#04x?}", machine.stack)
+            format!("{:#04x?}", &machine.stack[0..7])
             .replace("\n", "")
+            .replace(",", " | ")
+            .replace("   ", "")
             .as_str()
         );
 
-        mv(37, 0);
+        mv(36, 0);
+        addstr(
+            format!("{:#04x?}", &machine.stack[7..15])
+            .replace("\n", "")
+            .replace(",", " | ")
+            .replace("   ", "")
+            .as_str()
+        );
+
+        mv(38, 0);
         addstr(
             format!("registers [0..7]: {:#04x?}", &machine.registers[0..7])
             .replace("\n", "")
             .as_str()
         );
 
-        mv(38, 0);
+        mv(39, 0);
         addstr(
             format!("registers [8..F]: {:#04x?}", &machine.registers[8..15])
             .replace("\n", "")
             .as_str()
         );
 
-        mv(40, 0);
+        mv(41, 0);
         addstr(
             format!(
                 "pc: {:#04x}\tsp: {:#04x}\ti: {:#04x}\tsound_timer: {:#04x}\tdelay_timer: {:#04x}",
@@ -154,8 +166,8 @@ impl VM {
                 Ok(_) => ()
             }
             self.post_cycle_ops();
+            self.adjust_timers();
             VM::clk_speed_delay_adjustments(CLK_PERIOD);
-            
         }
     }
 
@@ -189,6 +201,11 @@ impl VM {
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
         DisplayManager::render_gfx(self);
+    }
+
+    fn adjust_timers(&mut self) {
+        if self.delay_timer > 0 { self.delay_timer -= 1; }
+        if self.sound_timer > 0 { self.sound_timer -= 1; }
     }
 
     fn clear_display(&mut self) {
