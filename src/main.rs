@@ -6,9 +6,11 @@ mod assembler;
 use chip::VM;
 use assembler::*;
 use std::env;
+use std::io::Error;
 
-fn main() {
+fn main() -> Result<(), Error> {
     (app())();
+    Ok(())
 }
 
 fn app() -> Box<dyn Fn()> {

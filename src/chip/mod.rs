@@ -171,6 +171,12 @@ impl VM {
         }
     }
 
+    pub fn poweroff(&mut self) {
+        println!("Chip8 VM is shutting down.");
+        self.running = false;
+        endwin();
+    }
+
     fn clk_speed_delay_adjustments(clk_period: time::Duration) {
         thread::sleep(clk_period);
     }
