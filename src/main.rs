@@ -35,12 +35,23 @@ fn app() -> Box<dyn Fn()> {
 }
 
 fn print_app_info() {
-    println!("USAGE: chip8 [mode] <opts>");
-    println!("\tmodes");
-    println!("\t\tvm");
-    println!("\t\t start the chip8 interpreter.");
-    println!("\t\t   opts: Chip8 ROM");
-    println!("\t\tassembler");
-    println!("\t\t start the chip8 assembler.");
-    println!("\t\t   opts: Chip8 assembly");
+    println!(
+        "{}",
+        r#"
+
+         ██████╗██╗  ██╗██╗██████╗  █████╗ 
+        ██╔════╝██║  ██║██║██╔══██╗██╔══██╗
+        ██║     ███████║██║██████╔╝╚█████╔╝
+        ██║     ██╔══██║██║██╔═══╝ ██╔══██╗
+        ╚██████╗██║  ██║██║██║     ╚█████╔╝
+         ╚═════╝╚═╝  ╚═╝╚═╝╚═╝      ╚════╝ 
+                                           
+        USAGE: chip8 [mode] <opts>
+        modes: [vm | tassembler]
+        vm: start the chip8 interpreter.
+            opts: CHIP8_ROM
+        assembler: start the chip8 assembler.
+            opts: CHIP8_ASSEMBLY
+        "#
+    );
 }

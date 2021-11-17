@@ -15,7 +15,7 @@ const SYS_REG_ADDR: usize = 0xF;
 const STACK_SIZE: usize = 16;
 const SPRITE_START_ADDR: usize = 0x050;
 const CHAR_SPRITE_SIZE: usize = 5;
-const CLOCK_SPEED: u64 = 600;
+const CLOCK_SPEED: u64 = 4;
 const CLK_PERIOD: time::Duration = time::Duration::from_millis(1000 / CLOCK_SPEED);
 
 const SPRITES: [Sprite; 16] = [
@@ -67,6 +67,27 @@ impl DisplayManager {
             }
         } 
         DisplayManager::render_machine_info(machine);
+    }
+
+    fn render_splash() {
+        clear();
+        let logo_image: [&str; 8] = [
+            "  ██████╗██╗  ██╗██╗██████╗  █████╗  ",
+            " ██╔════╝██║  ██║██║██╔══██╗██╔══██╗ ",
+            " ██║     ███████║██║██████╔╝╚█████╔╝ ",
+            " ██║     ██╔══██║██║██╔═══╝ ██╔══██╗ ",
+            " ╚██████╗██║  ██║██║██║     ╚█████╔╝ ",
+            " ╚═════╝╚═╝  ╚═╝╚═╝╚═╝      ╚════╝   ",
+            "     Copyright (c) 2021 Sreedev K    ",
+            "            BOOTING UP...            "
+        ];
+
+        for (index, row) in logo_image.iter().enumerate() {
+            mv((10 + index) as i32, 10);
+            addstr(row);
+        }
+        refresh();
+        thread::sleep(time::Duration::from_millis(2000));
     }
 
     fn render_machine_info(machine: &VM) {
@@ -155,6 +176,8 @@ impl VM {
 
     pub fn boot(&mut self, program_path: String) {
         DisplayManager::init_display();
+        DisplayManager::render_splash();
+
         self.load_fonts();
         self.load_program(program_path);
 
