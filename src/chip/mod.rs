@@ -83,7 +83,7 @@ impl DisplayManager {
         ];
 
         for (index, row) in logo_image.iter().enumerate() {
-            mv((10 + index) as i32, 10);
+            mv((20 + index) as i32, 15);
             addstr(row);
         }
         refresh();
