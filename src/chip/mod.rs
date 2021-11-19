@@ -1,14 +1,17 @@
+#[allow(unreachable_code)]
+
+mod display;
+
+use display::Manager;
 use std::io::prelude::*;
 use std::fs::File;
 use std::{io, char, thread, time};
 use itertools::Itertools;
 use std::iter::FlatMap;
 use rand::{thread_rng, Rng};
-use ncurses::*;
-use std::io::Write;
 
-type Sprite = [u8; 5];
-type Display = [u64; 32];
+type Sprite    = [u8; 5];
+type GfxMemory = [u64; 32];
 
 const PROGRAM_START_POINTER: usize = 0x200;
 const SYS_REG_ADDR: usize = 0xF;
@@ -37,8 +40,6 @@ const SPRITES: [Sprite; 16] = [
     [0xF0, 0x80, 0xF0, 0x80, 0x80], // F
 ];
 
-struct DisplayManager;
-
 #[derive(Debug)]
 pub struct VM {
     pub pc:          usize,
@@ -49,105 +50,10 @@ pub struct VM {
     pub memory:      [u8; 4096],
     pub registers:   [u8; 16],
     pub stack:       [u16; STACK_SIZE],
-    pub display:     Display,
+    pub gfx_memory:  GfxMemory,
+    pub display_man: display::Manager,
     pub keyboard:    [u8; 16],
     pub running:     bool
-}
-
-
-impl DisplayManager {
-    fn render_gfx(machine: &VM) {
-        clear();
-        mv(0, 0);
-        for (row_index, row) in machine.display.iter().enumerate() {
-            for column_index in 0..64 {
-                let pixel = (*row & (0x1 << column_index)) >> column_index;
-                mv(row_index as i32, column_index as i32);
-                addch(if pixel > 0 { '⁂' as u32 } else { ' ' as u32 });
-            }
-        } 
-        DisplayManager::render_machine_info(machine);
-    }
-
-    fn render_splash() {
-        clear();
-        let logo_image: [&str; 8] = [
-            "  ██████╗██╗  ██╗██╗██████╗  █████╗  ",
-            " ██╔════╝██║  ██║██║██╔══██╗██╔══██╗ ",
-            " ██║     ███████║██║██████╔╝╚█████╔╝ ",
-            " ██║     ██╔══██║██║██╔═══╝ ██╔══██╗ ",
-            " ╚██████╗██║  ██║██║██║     ╚█████╔╝ ",
-            " ╚═════╝╚═╝  ╚═╝╚═╝╚═╝      ╚════╝   ",
-            "     Copyright (c) 2021 Sreedev K    ",
-            "            BOOTING UP...            "
-        ];
-
-        for (index, row) in logo_image.iter().enumerate() {
-            mv((20 + index) as i32, 15);
-            addstr(row);
-        }
-        refresh();
-        thread::sleep(time::Duration::from_millis(2000));
-    }
-
-    fn render_machine_info(machine: &VM) {
-        mv(33, 0);
-        addstr(format!("current opcode: {:#04x}", machine.fetch()).as_str());
-
-        mv(34, 0);
-        addstr("stack:");
-
-        mv(35, 0);
-        addstr(
-            format!("{:#04x?}", &machine.stack[0..7])
-            .replace("\n", "")
-            .replace(",", " | ")
-            .replace("   ", "")
-            .as_str()
-        );
-
-        mv(36, 0);
-        addstr(
-            format!("{:#04x?}", &machine.stack[7..15])
-            .replace("\n", "")
-            .replace(",", " | ")
-            .replace("   ", "")
-            .as_str()
-        );
-
-        mv(38, 0);
-        addstr(
-            format!("registers [0..7]: {:#04x?}", &machine.registers[0..7])
-            .replace("\n", "")
-            .as_str()
-        );
-
-        mv(39, 0);
-        addstr(
-            format!("registers [8..F]: {:#04x?}", &machine.registers[8..15])
-            .replace("\n", "")
-            .as_str()
-        );
-
-        mv(41, 0);
-        addstr(
-            format!(
-                "pc: {:#04x}\tsp: {:#04x}\ti: {:#04x}\tsound_timer: {:#04x}\tdelay_timer: {:#04x}",
-                machine.pc, machine.sp, machine.i, machine.sound_timer, machine.delay_timer
-            )
-            .as_str()
-        );
-        refresh();
-    }
-
-    fn init_display() {
-        let locale_conf = LcCategory::all;
-        setlocale(locale_conf, "en_US.UTF-8");
-        initscr();
-        raw();
-        keypad(stdscr(), true);
-        noecho();
-    }
 }
 
 pub struct Opcode {
@@ -166,7 +72,8 @@ impl VM {
             memory:      [0; 4096],
             registers:   [0; 16],
             stack:       [0; 16],
-            display:     [0; 32],
+            gfx_memory:  [0; 32],
+            display_man: display::Manager::new(),
             keyboard:    [0; 16],
             running:     false
         }
@@ -175,9 +82,6 @@ impl VM {
     /* INTERFACE */
 
     pub fn boot(&mut self, program_path: String) {
-        DisplayManager::init_display();
-        DisplayManager::render_splash();
-
         self.load_fonts();
         self.load_program(program_path);
 
@@ -197,7 +101,6 @@ impl VM {
     pub fn poweroff(&mut self) {
         println!("Chip8 VM is shutting down.");
         self.running = false;
-        endwin();
     }
 
     fn clk_speed_delay_adjustments(clk_period: time::Duration) {
@@ -229,7 +132,7 @@ impl VM {
 
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
-        DisplayManager::render_gfx(self);
+        // DisplayManager::render_gfx(self);
     }
 
     fn adjust_timers(&mut self) {
@@ -238,7 +141,7 @@ impl VM {
     }
 
     fn clear_display(&mut self) {
-        self.display = [0; 32];
+        self.gfx_memory = [0; 32];
     }
 
     fn incr_pc(&mut self) {
@@ -265,7 +168,7 @@ impl VM {
         let sprite_size    = (opcode & 0x000F) as usize;
 
         for index in y..(y + sprite_size) {
-            self.display[index] = ((self.memory[self.i as usize] as u64) << x) ^ self.display[index];
+            self.gfx_memory[index] = ((self.memory[self.i as usize] as u64) << x) ^ self.gfx_memory[index];
         }
     }
 
