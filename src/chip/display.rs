@@ -89,7 +89,7 @@ impl Manager {
             .x_bounds([0.0, 64.0])
             .y_bounds([0.0, 32.0])
             .marker(symbols::Marker::Block)
-            .background_color(Color::Red)
+            .background_color(Color::Black)
             .paint(move |ctx| {
                 for (line_index, line) in gfx_memory_cpy.iter().enumerate() {
                     for pixel_index in 0..64 {
