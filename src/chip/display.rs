@@ -44,7 +44,7 @@ impl Manager {
 
         let machine_info_block    = Manager::generate_machine_internals_block(machine);
         let program_info_block    = Manager::generate_program_info_block(machine);
-        let machine_display_block = Manager::generate_machine_display_block(machine.gfx_memory);
+        let machine_display_block = Manager::generate_machine_display_block(machine);
 
         machine.display_man.terminal.draw(move |f| {
             let vlayout_vec = vlayout.split(f.size());
@@ -81,25 +81,27 @@ impl Manager {
             ].as_ref());
     }
 
-    fn generate_machine_display_block(buffer: [u64; 32]) -> Canvas<'static, impl Fn(&mut Context<'_>)> {
+    fn generate_machine_display_block(machine: &VM) -> Canvas<'static, impl Fn(&mut Context<'_>)> {
+        let gfx_memory_cpy = machine.gfx_memory.clone();
         let canvas = Canvas::default()
-            .block(Block::default().borders(Borders::ALL).title("MACHINE DISPLAY"))
-            .paint(move |ctx| { 
-                for (line_index, line) in buffer.iter().enumerate() {
+            .block(Block::default().title("Canvas").borders(Borders::ALL))
+            .x_bounds([0.0, 64.0])
+            .y_bounds([0.0, 32.0])
+            .marker(symbols::Marker::Block)
+            .paint(move |ctx| {
+                for (line_index, line) in gfx_memory_cpy.iter().enumerate() {
                     for pixel_index in 0..64 {
                         let pixel = (*line & (0x1 << pixel_index)) >> pixel_index;
                         ctx.draw(&Rectangle{
-                            y: line_index as f64,
                             x: pixel_index as f64,
-                            width: 1.0f64,
-                            height: 1.0f64,
-                            color: if pixel > 0 { Color::White } else { Color::Black }
+                            y: line_index as f64,
+                            width: 1.0,
+                            height: 1.0,
+                            color: if pixel > 0 { Color::White } else { Color::Blue }
                         });
                     }
                 }
-            })
-            .x_bounds([0.0, 64.0])
-            .y_bounds([0.0, 32.0]);
+            });
 
         return canvas;
     }
