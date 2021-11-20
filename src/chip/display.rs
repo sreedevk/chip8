@@ -36,51 +36,64 @@ impl Manager {
 
     pub fn render(machine: &mut VM) {
         machine.display_man.terminal.clear().unwrap();
+
+        /* Frame Loading + Rendering */
+        let outline = Manager::generate_outline();
+        let vlayout = Manager::generate_vertical_layout(); // .split(f.size());
+        let hlayout = Manager::generate_horizontal_layout(); // .split(vlayout[1]);
+
+        let machine_info_block = Manager::generate_machine_internals_block(machine);
+        let machine_display_block = Manager::generate_machine_display_block(machine);
+        let program_info_block = Manager::generate_program_info_block(machine);
+
         machine.display_man.terminal.draw(|f| {
-            let main = Block::default()
-                .title("Chip8")
-                .borders(Borders::ALL);
+            let vlayout_vec = vlayout.split(f.size());
+            let hlayout_vec = hlayout.split(vlayout_vec[1]);
 
-            let vlayout = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(1)
-                .constraints([
-                    Constraint::Percentage(10),
-                    Constraint::Percentage(90)
-                ].as_ref())
-                .split(f.size());
-
-
-            let hlayout = Layout::default()
-                .direction(Direction::Horizontal)
-                .vertical_margin(0)
-                .horizontal_margin(1)
-                .constraints([
-                    Constraint::Percentage(70),
-                    Constraint::Percentage(30)
-                ].as_ref())
-                .split(vlayout[1]);
-
-            f.render_widget(main, f.size());
-            f.render_widget(Manager::generate_machine_display_block(), hlayout[0]);
-            f.render_widget(Manager::generate_machine_internals_block(), hlayout[1]);
-            f.render_widget(Manager::generate_program_info_block(), vlayout[0]);
+            f.render_widget(outline, f.size());
+            f.render_widget(program_info_block, vlayout_vec[0]);
+            f.render_widget(machine_display_block, hlayout_vec[0]);
+            f.render_widget(machine_info_block, hlayout_vec[1]);
         }).unwrap();
     }
 
-    fn generate_machine_display_block() -> Block<'static> {
+    fn generate_outline() -> Block<'static> {
+        return Block::default()
+            .title("Chip8")
+            .borders(Borders::ALL);
+    }
+
+    fn generate_vertical_layout() -> Layout {
+        return Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref());
+    }
+
+    fn generate_horizontal_layout() -> Layout {
+        return Layout::default()
+            .direction(Direction::Horizontal)
+            .vertical_margin(0)
+            .horizontal_margin(1)
+            .constraints([
+                Constraint::Percentage(70),
+                Constraint::Percentage(30)
+            ].as_ref());
+    }
+
+    fn generate_machine_display_block(machine: &VM) -> Block<'static> {
         Block::default()
             .title("MACHINE DISPLAY")
             .borders(Borders::ALL)
     }
 
-    fn generate_machine_internals_block() -> Block<'static> {
+    fn generate_machine_internals_block(machine: &VM) -> Block<'static> {
         Block::default()
             .title("MACHINE INTERNALS")
             .borders(Borders::ALL)
     }
 
-    fn generate_program_info_block() -> Block<'static> {
+    fn generate_program_info_block(machine: &VM) -> Block<'static> {
         Block::default()
             .title("PROGRAM INFO")
             .borders(Borders::ALL)
