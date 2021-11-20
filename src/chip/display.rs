@@ -1,6 +1,7 @@
 use std::io;
 use termion::raw::{IntoRawMode, RawTerminal};
 use crate::chip::VM;
+use itertools::Itertools;
 use tui::{
     Terminal,
     backend::{Backend, TermionBackend},
@@ -88,6 +89,7 @@ impl Manager {
             .x_bounds([0.0, 64.0])
             .y_bounds([0.0, 32.0])
             .marker(symbols::Marker::Block)
+            .background_color(Color::Cyan)
             .paint(move |ctx| {
                 for (line_index, line) in gfx_memory_cpy.iter().enumerate() {
                     for pixel_index in 0..64 {
@@ -106,13 +108,23 @@ impl Manager {
         return canvas;
     }
 
-    fn generate_machine_internals_block(machine: &VM) -> Block<'static> {
-        Block::default()
-            .title("MACHINE INTERNALS")
-            .borders(Borders::ALL)
+    fn generate_machine_internals_block(machine: &VM) -> List<'static> {
+        let machine_pc = machine.pc.clone();
+        let mut memory_window = [0u8; 20];
+        (memory_window).copy_from_slice(&machine.memory[machine_pc..machine_pc+10]);
+
+        let mut memory_window_list: Vec<ListItem> = Vec::with_capacity(10);
+
+        for (upper, lower) in memory_window.iter().tuples() {
+            memory_window_list.push(
+                ListItem::new(format!("{:#08x}", (upper << 8) & lower))
+            );
+        }
+
+        return List::new(memory_window_list);
     }
 
-    fn generate_program_info_block(machine: &VM) -> Block<'static> {
+    fn generate_program_info_block(_machine: &VM) -> Block<'static> {
         Block::default()
             .title("PROGRAM INFO")
             .borders(Borders::ALL)
