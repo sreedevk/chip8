@@ -1,6 +1,7 @@
 #[allow(unreachable_code)]
 
 mod display;
+mod events;
 
 use std::{
     io,
@@ -58,6 +59,7 @@ pub struct VM {
     pub stack:       [u16; STACK_SIZE],
     pub gfx_memory:  GfxMemory,
     pub display_man: display::Manager,
+    pub events_man:  events::Manager,
     pub keyboard:    [u8; 16],
     pub running:     bool
 }
@@ -80,6 +82,7 @@ impl VM {
             stack:       [0; 16],
             gfx_memory:  [0; 32],
             display_man: display::Manager::new(),
+            events_man:  events::Manager::new(),
             keyboard:    [0; 16],
             running:     false
         }
@@ -138,7 +141,8 @@ impl VM {
 
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
-        self.display_man.render();
+        display::Manager::render(self);
+        events::Manager::handle(self).unwrap();
     }
 
     fn adjust_timers(&mut self) {

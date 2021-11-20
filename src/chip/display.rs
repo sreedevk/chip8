@@ -34,47 +34,58 @@ impl Manager {
         Manager { terminal }
     }
 
-    pub fn render(&mut self) {
-        self.terminal.draw(|f| {
-            let main = Block::default()
-                .title("Chip8")
-                .borders(Borders::ALL);
+    pub fn render(machine: &mut VM) {
+        machine.display_man.terminal.draw(|f| { Manager::draw_layout(f) }).unwrap();
+        // self.terminal.draw(|f| { Manager::draw_machine_display(f) }).unwrap();
+    }
 
-            let vlayout = Layout::default()
-                .direction(Direction::Vertical)
-                .margin(1)
-                .constraints([
-                    Constraint::Percentage(10),
-                    Constraint::Percentage(90)
-                ].as_ref())
-                .split(f.size());
+    pub fn draw_machine_display<B>(f: &mut Frame<B>)
+    where 
+        B: Backend,
+    {}
+
+    pub fn draw_layout<B>(f: &mut Frame<B>)
+    where 
+        B: Backend,
+    {
+        let main = Block::default()
+            .title("Chip8")
+            .borders(Borders::ALL);
+
+        let vlayout = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints([
+                Constraint::Percentage(10),
+                Constraint::Percentage(90)
+            ].as_ref())
+            .split(f.size());
 
 
-            let hlayout = Layout::default()
-                .direction(Direction::Horizontal)
-                .margin(1)
-                .constraints([
-                    Constraint::Percentage(60),
-                    Constraint::Percentage(40)
-                ].as_ref())
-                .split(f.size());
+        let hlayout = Layout::default()
+            .direction(Direction::Horizontal)
+            .margin(1)
+            .constraints([
+                Constraint::Percentage(60),
+                Constraint::Percentage(40)
+            ].as_ref())
+            .split(vlayout[1]);
 
-            let machine_display = Block::default()
-                .title("Machine Display")
-                .borders(Borders::ALL);
+        let machine_display = Block::default()
+            .title("MACHINE DISPLAY")
+            .borders(Borders::ALL);
 
-            let machine_stats = Block::default()
-                .title("Machine Internals")
-                .borders(Borders::ALL);
+        let machine_stats = Block::default()
+            .title("MACHINE INTERNALS")
+            .borders(Borders::ALL);
 
-            let machine_title = Block::default()
-                .title("Machine TITLE")
-                .borders(Borders::ALL);
+        let machine_title = Block::default()
+            .title("PROGRAM INFO")
+            .borders(Borders::ALL);
 
-            f.render_widget(main, f.size());
-            f.render_widget(machine_display, hlayout[0]);
-            f.render_widget(machine_stats, hlayout[1]);
-            f.render_widget(machine_title, vlayout[0]);
-        }).unwrap();
+        f.render_widget(main, f.size());
+        f.render_widget(machine_display, hlayout[0]);
+        f.render_widget(machine_stats, hlayout[1]);
+        f.render_widget(machine_title, vlayout[0]);
     }
 }
