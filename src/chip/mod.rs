@@ -2,12 +2,18 @@
 
 mod display;
 
+use std::{
+    io,
+    io::prelude::*,
+    fs::File,
+    char,
+    thread,
+    time,
+    iter::FlatMap
+};
+
 use display::Manager;
-use std::io::prelude::*;
-use std::fs::File;
-use std::{io, char, thread, time};
 use itertools::Itertools;
-use std::iter::FlatMap;
 use rand::{thread_rng, Rng};
 
 type Sprite    = [u8; 5];
