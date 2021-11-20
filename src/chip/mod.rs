@@ -132,7 +132,7 @@ impl VM {
 
     /* CORE FUNCTIONS */
     fn post_cycle_ops(&mut self) {
-        // DisplayManager::render_gfx(self);
+        self.display_man.render();
     }
 
     fn adjust_timers(&mut self) {
