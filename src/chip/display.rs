@@ -84,9 +84,19 @@ impl Manager {
     fn generate_machine_display_block(buffer: [u64; 32]) -> Canvas<'static, impl Fn(&mut Context<'_>)> {
         let canvas = Canvas::default()
             .block(Block::default().borders(Borders::ALL).title("MACHINE DISPLAY"))
-            .paint(|ctx| { 
-                ctx.draw(&Map{color: Color::Blue, resolution: MapResolution::High});
-                ctx.print(10.0, 10.0, "You are Here.", Color::Yellow);
+            .paint(move |ctx| { 
+                for (line_index, line) in buffer.iter().enumerate() {
+                    for pixel_index in 0..64 {
+                        let pixel = (*line & (0x1 << pixel_index)) >> pixel_index;
+                        ctx.draw(&Rectangle{
+                            y: line_index as f64,
+                            x: pixel_index as f64,
+                            width: 1.0f64,
+                            height: 1.0f64,
+                            color: if pixel > 0 { Color::White } else { Color::Black }
+                        });
+                    }
+                }
             })
             .x_bounds([-180.0, 180.0])
             .y_bounds([-90.0, 90.0]);
