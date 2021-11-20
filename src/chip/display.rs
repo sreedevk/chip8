@@ -36,41 +36,36 @@ impl Manager {
 
     pub fn render(machine: &mut VM) {
         machine.display_man.terminal.clear().unwrap();
-        machine.display_man.terminal.draw(|f| { Manager::draw_layout(f) }).unwrap();
-    }
+        machine.display_man.terminal.draw(|f| {
+            let main = Block::default()
+                .title("Chip8")
+                .borders(Borders::ALL);
 
-    pub fn draw_layout<B>(f: &mut Frame<B>)
-    where 
-        B: Backend,
-    {
-        let main = Block::default()
-            .title("Chip8")
-            .borders(Borders::ALL);
-
-        let vlayout = Layout::default()
-            .direction(Direction::Vertical)
-            .margin(1)
-            .constraints([
-                Constraint::Percentage(10),
-                Constraint::Percentage(90)
-            ].as_ref())
-            .split(f.size());
+            let vlayout = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(1)
+                .constraints([
+                    Constraint::Percentage(10),
+                    Constraint::Percentage(90)
+                ].as_ref())
+                .split(f.size());
 
 
-        let hlayout = Layout::default()
-            .direction(Direction::Horizontal)
-            .vertical_margin(0)
-            .horizontal_margin(1)
-            .constraints([
-                Constraint::Percentage(70),
-                Constraint::Percentage(30)
-            ].as_ref())
-            .split(vlayout[1]);
+            let hlayout = Layout::default()
+                .direction(Direction::Horizontal)
+                .vertical_margin(0)
+                .horizontal_margin(1)
+                .constraints([
+                    Constraint::Percentage(70),
+                    Constraint::Percentage(30)
+                ].as_ref())
+                .split(vlayout[1]);
 
-        f.render_widget(main, f.size());
-        f.render_widget(Manager::generate_machine_display_block(), hlayout[0]);
-        f.render_widget(Manager::generate_machine_internals_block(), hlayout[1]);
-        f.render_widget(Manager::generate_program_info_block(), vlayout[0]);
+            f.render_widget(main, f.size());
+            f.render_widget(Manager::generate_machine_display_block(), hlayout[0]);
+            f.render_widget(Manager::generate_machine_internals_block(), hlayout[1]);
+            f.render_widget(Manager::generate_program_info_block(), vlayout[0]);
+        }).unwrap();
     }
 
     fn generate_machine_display_block() -> Block<'static> {
