@@ -85,11 +85,11 @@ impl Manager {
     fn generate_machine_display_block(machine: &VM) -> Canvas<'static, impl Fn(&mut Context<'_>)> {
         let gfx_memory_cpy = machine.gfx_memory.clone();
         let canvas = Canvas::default()
-            .block(Block::default().title("Canvas").borders(Borders::ALL))
+            .block(Block::default().title("CHIP8 DISPLAY").borders(Borders::ALL))
             .x_bounds([0.0, 64.0])
             .y_bounds([0.0, 32.0])
             .marker(symbols::Marker::Block)
-            .background_color(Color::Cyan)
+            .background_color(Color::Red)
             .paint(move |ctx| {
                 for (line_index, line) in gfx_memory_cpy.iter().enumerate() {
                     for pixel_index in 0..64 {
@@ -110,11 +110,10 @@ impl Manager {
 
     fn generate_machine_internals_block(machine: &VM) -> List<'static> {
         let machine_pc = machine.pc.clone();
-        let mut memory_window = [0u8; 20];
-        (memory_window).copy_from_slice(&machine.memory[machine_pc..machine_pc+10]);
+        let memory_window_range = machine_pc..[machine_pc, machine_pc - 10].iter().min().unwrap() + 10;
+        let memory_window = &machine.memory[memory_window_range];
 
         let mut memory_window_list: Vec<ListItem> = Vec::with_capacity(10);
-
         for (upper, lower) in memory_window.iter().tuples() {
             memory_window_list.push(
                 ListItem::new(format!("{:#08x}", (upper << 8) & lower))
