@@ -35,14 +35,9 @@ impl Manager {
     }
 
     pub fn render(machine: &mut VM) {
+        machine.display_man.terminal.clear().unwrap();
         machine.display_man.terminal.draw(|f| { Manager::draw_layout(f) }).unwrap();
-        // self.terminal.draw(|f| { Manager::draw_machine_display(f) }).unwrap();
     }
-
-    pub fn draw_machine_display<B>(f: &mut Frame<B>)
-    where 
-        B: Backend,
-    {}
 
     pub fn draw_layout<B>(f: &mut Frame<B>)
     where 
@@ -64,28 +59,35 @@ impl Manager {
 
         let hlayout = Layout::default()
             .direction(Direction::Horizontal)
-            .margin(1)
+            .vertical_margin(0)
+            .horizontal_margin(1)
             .constraints([
-                Constraint::Percentage(60),
-                Constraint::Percentage(40)
+                Constraint::Percentage(70),
+                Constraint::Percentage(30)
             ].as_ref())
             .split(vlayout[1]);
 
-        let machine_display = Block::default()
-            .title("MACHINE DISPLAY")
-            .borders(Borders::ALL);
-
-        let machine_stats = Block::default()
-            .title("MACHINE INTERNALS")
-            .borders(Borders::ALL);
-
-        let machine_title = Block::default()
-            .title("PROGRAM INFO")
-            .borders(Borders::ALL);
-
         f.render_widget(main, f.size());
-        f.render_widget(machine_display, hlayout[0]);
-        f.render_widget(machine_stats, hlayout[1]);
-        f.render_widget(machine_title, vlayout[0]);
+        f.render_widget(Manager::generate_machine_display_block(), hlayout[0]);
+        f.render_widget(Manager::generate_machine_internals_block(), hlayout[1]);
+        f.render_widget(Manager::generate_program_info_block(), vlayout[0]);
+    }
+
+    fn generate_machine_display_block() -> Block<'static> {
+        Block::default()
+            .title("MACHINE DISPLAY")
+            .borders(Borders::ALL)
+    }
+
+    fn generate_machine_internals_block() -> Block<'static> {
+        Block::default()
+            .title("MACHINE INTERNALS")
+            .borders(Borders::ALL)
+    }
+
+    fn generate_program_info_block() -> Block<'static> {
+        Block::default()
+            .title("PROGRAM INFO")
+            .borders(Borders::ALL)
     }
 }
