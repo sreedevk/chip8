@@ -8,7 +8,7 @@ use tui::{
     style::{Color, Modifier, Style},
     symbols,
     text::{Span, Spans},
-    widgets::canvas::{Canvas, Line, Map, MapResolution, Rectangle},
+    widgets::canvas::{Canvas, Context, Line, Map, MapResolution, Rectangle},
     widgets::{
         Axis, BarChart, Block, Borders, Cell, Chart, Dataset, Gauge, LineGauge, List, ListItem,
         Paragraph, Row, Sparkline, Table, Tabs, Wrap, Widget,
@@ -39,14 +39,14 @@ impl Manager {
 
         /* Frame Loading + Rendering */
         let outline = Manager::generate_outline();
-        let vlayout = Manager::generate_vertical_layout(); // .split(f.size());
-        let hlayout = Manager::generate_horizontal_layout(); // .split(vlayout[1]);
+        let vlayout = Manager::generate_vertical_layout();
+        let hlayout = Manager::generate_horizontal_layout();
 
-        let machine_info_block = Manager::generate_machine_internals_block(machine);
-        let machine_display_block = Manager::generate_machine_display_block(machine);
-        let program_info_block = Manager::generate_program_info_block(machine);
+        let machine_info_block    = Manager::generate_machine_internals_block(machine);
+        let program_info_block    = Manager::generate_program_info_block(machine);
+        let machine_display_block = Manager::generate_machine_display_block(machine.gfx_memory);
 
-        machine.display_man.terminal.draw(|f| {
+        machine.display_man.terminal.draw(move |f| {
             let vlayout_vec = vlayout.split(f.size());
             let hlayout_vec = hlayout.split(vlayout_vec[1]);
 
@@ -81,10 +81,17 @@ impl Manager {
             ].as_ref());
     }
 
-    fn generate_machine_display_block(machine: &VM) -> Block<'static> {
-        Block::default()
-            .title("MACHINE DISPLAY")
-            .borders(Borders::ALL)
+    fn generate_machine_display_block(buffer: [u64; 32]) -> Canvas<'static, impl Fn(&mut Context<'_>)> {
+        let canvas = Canvas::default()
+            .block(Block::default().borders(Borders::ALL).title("MACHINE DISPLAY"))
+            .paint(|ctx| { 
+                ctx.draw(&Map{color: Color::Blue, resolution: MapResolution::High});
+                ctx.print(10.0, 10.0, "You are Here.", Color::Yellow);
+            })
+            .x_bounds([-180.0, 180.0])
+            .y_bounds([-90.0, 90.0]);
+
+        return canvas;
     }
 
     fn generate_machine_internals_block(machine: &VM) -> Block<'static> {
