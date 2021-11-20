@@ -98,8 +98,8 @@ impl Manager {
                     }
                 }
             })
-            .x_bounds([-180.0, 180.0])
-            .y_bounds([-90.0, 90.0]);
+            .x_bounds([0.0, 64.0])
+            .y_bounds([0.0, 32.0]);
 
         return canvas;
     }
