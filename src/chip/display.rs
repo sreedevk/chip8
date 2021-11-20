@@ -5,7 +5,7 @@ use itertools::Itertools;
 use tui::{
     Terminal,
     backend::{Backend, TermionBackend},
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Corner, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     symbols,
     text::{Span, Spans},
@@ -117,10 +117,19 @@ impl Manager {
         for (upper, lower) in memory_window.iter().tuples() {
             memory_window_list.push(
                 ListItem::new(format!("{:#08x}", (upper << 8) & lower))
+                .style(Style::default().fg(Color::Yellow))
             );
         }
 
-        return List::new(memory_window_list);
+        return List::new(memory_window_list)
+            .block(Block::default().borders(Borders::ALL).title("MACHINE INFO"))
+            .start_corner(Corner::BottomLeft)
+            .highlight_style(
+                Style::default()
+                .bg(Color::LightGreen)
+                .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol(">> ");
     }
 
     fn generate_program_info_block(_machine: &VM) -> Block<'static> {
