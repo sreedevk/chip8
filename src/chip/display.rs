@@ -109,12 +109,10 @@ impl Manager {
     }
 
     fn generate_machine_internals_block(machine: &VM) -> List<'static> {
-        let machine_pc = machine.pc.clone();
-        let memory_window_range = machine_pc..[machine_pc, machine_pc - 10].iter().min().unwrap() + 10;
-        let memory_window = &machine.memory[memory_window_range];
-
+        let memory_window_range = machine.pc..[machine.pc, machine.pc].iter().min().unwrap() + 10;
         let mut memory_window_list: Vec<ListItem> = Vec::with_capacity(10);
-        for (upper, lower) in memory_window.iter().tuples() {
+
+        for (upper, lower) in machine.memory[memory_window_range].iter().tuples() {
             memory_window_list.push(
                 ListItem::new(format!("{:#08x}", (upper << 8) & lower))
                 .style(Style::default().fg(Color::Yellow))
