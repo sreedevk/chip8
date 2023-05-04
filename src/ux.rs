@@ -45,6 +45,7 @@ pub fn init() -> Result<()> {
 
     'vmevloop: loop {
         for evt in event_pump.poll_iter() {
+            dbg!(&chip8);
             match evt {
                 Event::Quit { .. }
                 | Event::KeyDown {

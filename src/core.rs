@@ -13,7 +13,6 @@ const V_REG_COUNT: usize = 16;
 const MAX_STACK_DEPTH: usize = 16;
 const KEYS_COUNT: usize = 16;
 
-#[derive(Debug, Clone)]
 pub struct VM {
     pub pc: u16,
     pub ram: [u8; RAM_SIZE],
@@ -25,6 +24,14 @@ pub struct VM {
     pub sp: u16,
     pub dt: u8,
     pub st: u8,
+}
+
+impl std::fmt::Debug for VM {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let current_opcode = self.ram[self.pc as usize];
+        write!(f, "Opcode: {:#08x} | ", current_opcode);
+        write!(f, "Program Counter: {:#08x} | ", self.pc)
+    }
 }
 
 impl VM {
@@ -84,12 +91,12 @@ impl VM {
     }
 
     fn decode(opcode: u16) -> (u16, u16, u16, u16) {
-        [0x000F, 0x00F0, 0x0F00, 0xF000]
-            .into_iter()
-            .enumerate()
-            .map(|(index, mask)| (opcode & mask) >> (index.pow(2)))
-            .collect_tuple()
-            .unwrap()
+        let digit1 = (opcode & 0xF000) >> 12;
+        let digit2 = (opcode & 0x0F00) >> 8;
+        let digit3 = (opcode & 0x00F0) >> 4;
+        let digit4 = (opcode & 0x000F);
+
+        (digit1, digit2, digit3, digit4)
     }
 
     fn execute(&mut self, opcode: u16) -> Result<()> {
@@ -318,7 +325,10 @@ impl VM {
     }
 
     fn add_vy_to_vx(&mut self, vx: usize, vy: usize) -> Result<()> {
-        self.v_reg[vx] += self.v_reg[vy];
+        let (new_vx, carry) = self.v_reg[vx].overflowing_add(self.v_reg[vy]);
+        let new_vf = if carry { 0 } else { 1 };
+        self.v_reg[vx] = new_vx;
+        self.v_reg[0xf] = new_vf;
 
         Ok(())
     }
