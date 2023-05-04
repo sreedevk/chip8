@@ -10,7 +10,7 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 
-const SCALE: u32 = 15;
+const SCALE: u32 = 20;
 const WINDOW_WIDTH: u32 = (core::DISPLAY_WIDTH as u32) * SCALE;
 const WINDOW_HEIGHT: u32 = (core::DISPLAY_HEIGHT as u32) * SCALE;
 const TICKS_PER_FRAME: usize = 10;
@@ -44,8 +44,8 @@ pub fn init() -> Result<()> {
     chip8.load_rom(&buffer)?;
 
     'vmevloop: loop {
+        dbg!(&chip8);
         for evt in event_pump.poll_iter() {
-            dbg!(&chip8);
             match evt {
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -68,6 +68,7 @@ pub fn init() -> Result<()> {
                 }
                 _ => (),
             }
+
         }
 
         for _ in 0..TICKS_PER_FRAME {
