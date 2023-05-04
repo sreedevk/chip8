@@ -136,7 +136,7 @@ impl VM {
             (0xf, x, 3, 3) => self.bcd_vx((x as usize)),
             (0xf, x, 5, 5) => self.set_v0_sub_vx_info_i((x as usize)),
             (0xf, x, 6, 5) => self.load_i_into_v0_vx((x as usize)),
-            (_, _, _, _) => unimplemented!("Unimplemented Opcode: {}", opcode),
+            (_, _, _, _) => unimplemented!("Unimplemented Opcode: {:#08x}", opcode),
         }
     }
 
