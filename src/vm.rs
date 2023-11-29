@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use crate::fonts::{FONT_SPRITES, FONT_SPRITES_SIZE};
 use crate::rom::Ch8Rom;
-use crate::display;
 use anyhow::Result;
 use rand::Rng;
 
