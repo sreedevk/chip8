@@ -124,7 +124,7 @@ impl VM {
             (0xa, _, _, _) => self.set_vx_vi(bytecode & 0xFFF),
             (0xb, _, _, _) => self.jmp_v0_off_nnn(bytecode & 0xFFF),
             (0xc, x, _, _) => self.vx_rand_and_nn(x as usize, (bytecode & 0xFF) as u8),
-            (0xd, x, y, n) => self.draw(x as usize, y as usize, n as usize),
+            (0xd, x, y, n) => self.draw(x as usize, y as usize, n),
             (0xe, x, 9, 0xe) => self.skip_if_key(x as usize),
             (0xe, x, 0xa, 1) => self.skip_if_not_key(x as usize),
             (0xf, x, 0, 7) => self.set_vx_dt(x as usize),
@@ -300,41 +300,25 @@ impl VM {
         Ok(())
     }
 
-    fn draw(&mut self, x: usize, y: usize, n: usize) -> Result<()> {
-        self.registers[0x0f] = 0;
-        for byte in 0..n {
-            let y = (self.registers[y] as usize + byte) % display::Display::HEIGHT as usize;
-            for bit in 0..8 {
-                let x = (self.registers[x] as usize + bit) % display::Display::WIDTH as usize;
-                let color = (self.memory[self.index + byte] >> (7 - bit)) & 1;
-                self.registers[0x0f] |= color & self.vram[y][x];
-                self.vram[y][x] ^= color;
-
+    fn draw(&mut self, x: usize, y: usize, n: u8) -> Result<()> {
+        let mut collision = false;
+        for i in 0..n {
+            let byte = self.memory[self.index + i as usize];
+            for j in 0..8 {
+                let bit = (byte >> (7 - j)) & 0x1;
+                let x = (self.registers[x] as usize + j) % 64;
+                let y = (self.registers[y] as usize + i as usize) % 32;
+                let prev_bit = self.vram[y][x];
+                self.vram[y][x] ^= bit;
+                if prev_bit == 1 && self.vram[y][x] == 0 {
+                    collision = true;
+                }
             }
         }
+        self.registers[0xF] = collision as Byte;
 
         Ok(())
     }
-
-    // fn draw(&mut self, x: usize, y: usize, n: u8) -> Result<()> {
-    //     let mut collision = false;
-    //     for i in 0..n {
-    //         let byte = self.memory[self.index + i as usize];
-    //         for j in 0..8 {
-    //             let bit = (byte >> (7 - j)) & 0x1;
-    //             let x = (self.registers[x] as usize + j) % 64;
-    //             let y = (self.registers[y] as usize + i as usize) % 32;
-    //             let prev_bit = self.vram[y][x];
-    //             self.vram[y][x] ^= bit;
-    //             if prev_bit == 1 && self.vram[y][x] == 0 {
-    //                 collision = true;
-    //             }
-    //         }
-    //     }
-    //     self.registers[0xF] = collision as Byte;
-    //
-    //     Ok(())
-    // }
 
     fn skip_if_key(&mut self, x: usize) -> Result<()> {
         if self.keyboard[self.registers[x] as usize] {
