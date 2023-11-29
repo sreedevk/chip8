@@ -1,5 +1,4 @@
 mod fonts;
-mod ux;
 mod rom;
 mod vm;
 mod display;
